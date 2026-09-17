@@ -38,10 +38,16 @@ const Data = (() => {
     }, overrides || {});
   }
 
+  // 「〜コピー」「〜(反転)」の連続スタックを防ぎつつ複製名を作る
+  function dupName(name, suffix) {
+    const base = name.replace(/(コピー|\(反転\))+$/, '').trim() || name;
+    return base + suffix;
+  }
+
   function mirrorBone(bone) {
     const copy = clone(bone);
     copy.id = uid('bone');
-    copy.name = bone.name + '(反転)';
+    copy.name = dupName(bone.name, '(反転)');
     copy.keyframes = bone.keyframes.map(k => ({
       ...k,
       x: -k.x,
@@ -309,7 +315,7 @@ const Data = (() => {
   ];
 
   return {
-    uid, defaultSettings, newBone, mirrorBone, newPattern, clone, sortKf,
+    uid, defaultSettings, newBone, mirrorBone, dupName, newPattern, clone, sortKf,
     listSaves, savePattern, deleteSave,
     exportPattern, importPatternFile,
     KIND_DEFAULTS, TEMPLATES,

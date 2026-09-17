@@ -76,7 +76,7 @@ const Main = (() => {
       row.querySelector('[data-act=dup]').addEventListener('click', () => {
         const copy = Data.clone(p);
         copy.id = Data.uid('pat');
-        copy.name = p.name + 'コピー';
+        copy.name = Data.dupName(p.name, 'コピー');
         Data.savePattern(copy);
         renderSaveList();
         toast('複製しました');
@@ -97,9 +97,19 @@ const Main = (() => {
     el.tabPlay.addEventListener('click', () => setMode('play'));
 
     el.btnNew.addEventListener('click', () => {
-      if (!confirm('新規作成します。現在の編集内容は失われます。よろしいですか?')) return;
+      if (!confirm('新規作成します。現在の編集内容は失われます(保存済みのものは残ります)。よろしいですか?')) return;
       Editor.setPattern(Data.newPattern());
       toast('新規パターンを作成しました');
+    });
+
+    el.btnDupPattern.addEventListener('click', () => {
+      const original = Editor.getPattern();
+      Data.savePattern(original);
+      const copy = Data.clone(original);
+      copy.id = Data.uid('pat');
+      copy.name = Data.dupName(copy.name, 'コピー');
+      Editor.setPattern(copy);
+      toast(`「${original.name}」を保存し、「${copy.name}」の編集を開始しました`);
     });
 
     el.btnLibrary.addEventListener('click', openLibrary);
@@ -155,7 +165,7 @@ const Main = (() => {
   function init() {
     ['tabEditor', 'tabPlay', 'editorView', 'playView', 'toast',
      'libraryModal', 'libTemplates', 'libSaves', 'libTabTemplates', 'libTabSaves', 'btnLibrary', 'btnLibraryClose',
-     'btnNew', 'btnSave', 'btnExport', 'btnImport', 'importFile',
+     'btnNew', 'btnDupPattern', 'btnSave', 'btnExport', 'btnImport', 'importFile',
      'helpModal', 'btnHelp', 'btnHelpClose', 'btnSound'].forEach(id => el[id] = qs(id));
 
     Editor.init(Data.TEMPLATES[0].build());

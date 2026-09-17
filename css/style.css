@@ -85,6 +85,16 @@ input { font-family: inherit; }
 .swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid #000; flex-shrink: 0; }
 .bname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wide { width: 100%; padding: 9px; }
+.addBoneRow { display: flex; gap: 6px; margin-bottom: 6px; }
+.addBoneRow select {
+  flex: 1; min-width: 0; background: var(--panel2); border: 2px solid var(--border); color: var(--text);
+  padding: 5px 6px; border-radius: 4px; font-size: 12px;
+}
+.addBoneRow button {
+  background: var(--white); color: #14141a; border: 2px solid var(--white);
+  padding: 7px 14px; border-radius: 4px; font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.addBoneRow button:hover { opacity: 0.9; }
 
 .settingsGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; }
 .settingsGrid label { display: flex; flex-direction: column; gap: 4px; color: var(--textDim); }

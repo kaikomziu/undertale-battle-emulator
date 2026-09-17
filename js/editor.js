@@ -23,12 +23,15 @@ const Editor = (() => {
     canvas = qs('stageCanvas');
     ctx = canvas.getContext('2d');
 
-    ['patternName', 'boneList', 'btnAddBone',
+    ['patternName', 'boneList', 'btnAddBone', 'newBoneKind',
      'setDuration', 'setHp', 'setSoulSpeed', 'setDamage', 'setBoxW', 'setBoxH',
      'btnPreviewPlay', 'btnPreviewStop', 'scrubReadout', 'durReadout',
      'boneProps', 'kfList', 'kfEditor', 'kfTime', 'kfX', 'kfY', 'kfRot', 'kfScale', 'kfOpacity', 'kfLength', 'kfThick',
      'btnDupKf', 'btnDelKf', 'btnAddKfNow',
      'timelineScroll', 'timelineRuler', 'timelineTracks', 'playhead'].forEach(id => el[id] = qs(id));
+
+    el.newBoneKind.innerHTML = Object.keys(Data.KIND_DEFAULTS).map(k =>
+      `<option value="${k}">${Data.KIND_DEFAULTS[k].label}</option>`).join('');
 
     setPattern(initialPattern);
     bindEvents();
@@ -140,7 +143,7 @@ const Editor = (() => {
     qs('bpDup').addEventListener('click', () => {
       const copy = Data.clone(b);
       copy.id = Data.uid('bone');
-      copy.name = b.name + 'コピー';
+      copy.name = Data.dupName(b.name, 'コピー');
       pattern.bones.push(copy);
       selectedBoneId = copy.id; selectedKf = null;
       renderAll();
@@ -387,7 +390,12 @@ const Editor = (() => {
     el.patternName.addEventListener('input', () => { pattern.name = el.patternName.value || '無題の攻撃'; });
 
     el.btnAddBone.addEventListener('click', () => {
-      const b = Data.newBone({ name: '骨' + (pattern.bones.length + 1) });
+      const kind = el.newBoneKind.value || 'normal';
+      const b = Data.newBone({
+        name: Data.KIND_DEFAULTS[kind].label.replace(/\(.*\)/, '') + (pattern.bones.length + 1),
+        kind,
+        color: Data.KIND_DEFAULTS[kind].color,
+      });
       pattern.bones.push(b);
       selectedBoneId = b.id; selectedKf = b.keyframes[0];
       renderAll();
