@@ -398,6 +398,26 @@ const Editor = (() => {
     canvas.addEventListener('pointercancel', endDrag);
   }
 
+  // ---------- キーボードショートカット ----------
+  function bindKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      if (!document.getElementById('editorView').classList.contains('active')) return;
+      const tag = (e.target && e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedKf) {
+        e.preventDefault();
+        const b = findBone(selectedBoneId);
+        if (!b) return;
+        b.keyframes = b.keyframes.filter(k => k !== selectedKf);
+        selectedKf = null;
+        renderKfList(); renderTimeline(); renderStage();
+      } else if (e.key === 'Escape' && selectedKf) {
+        selectedKf = null;
+        renderKfList(); renderTimeline(); renderStage();
+      }
+    });
+  }
+
   // ---------- プレビュー再生 ----------
   function stopPreview() {
     previewPlaying = false;
@@ -435,6 +455,7 @@ const Editor = (() => {
   // ---------- イベント ----------
   function bindEvents() {
     bindCanvasEvents();
+    bindKeyboardShortcuts();
 
     el.patternName.addEventListener('input', () => { pattern.name = el.patternName.value || '無題の攻撃'; });
 
