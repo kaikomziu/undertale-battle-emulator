@@ -34,6 +34,6 @@ Undertale風の弾幕バトルを自作できるブラウザ製エディタ。�
 
 ## 共有ギャラリーのバックエンド
 
-Supabaseの`utbe_patterns`テーブル(name, author, pattern jsonb, created_at)に公開データを保存。RLSで誰でもSELECT/INSERT可能、UPDATE/DELETEは不可(公開後は編集・削除できない一方向の投稿)。1件あたりのJSONサイズは約190KBまでに制限。
+Supabaseの`utbe_patterns`テーブル(name, author, pattern jsonb, created_at)に公開データを保存。RLSで誰でもSELECT/INSERT可能、UPDATE/DELETEは不可(公開後は編集・削除できない一方向の投稿)。1件あたりのJSONサイズは約2MBまでに制限。
 
 ビルド不要、静的ファイルのみで動作します。
