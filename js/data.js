@@ -272,6 +272,31 @@ const Data = (() => {
     return p;
   }
 
+  function tplGrowingSpike() {
+    const p = newPattern('サンプル: 伸び縮みする骨');
+    p.settings.duration = 8000;
+    const mkSpike = (x, y, rot, delay) => newBone({
+      name: '伸縮骨', length: 20, thickness: 20, keyframes: [
+        { t: delay, x, y, rot, scale: 1, opacity: 1, length: 10, thickness: 14 },
+        { t: delay + 500, x, y, rot, scale: 1, opacity: 1, length: 260, thickness: 26 },
+        { t: delay + 1300, x, y, rot, scale: 1, opacity: 1, length: 260, thickness: 26 },
+        { t: delay + 1700, x, y, rot, scale: 1, opacity: 0, length: 10, thickness: 14 },
+      ],
+    });
+    p.bones = [
+      mkSpike(-140, 100, -90, 0),
+      mkSpike(0, 100, -90, 500),
+      mkSpike(140, 100, -90, 1000),
+      mkSpike(-140, -100, 90, 2600),
+      mkSpike(0, -100, 90, 3100),
+      mkSpike(140, -100, 90, 3600),
+      mkSpike(-140, 100, -90, 5200),
+      mkSpike(0, 100, -90, 5700),
+      mkSpike(140, 100, -90, 6200),
+    ];
+    return p;
+  }
+
   const TEMPLATES = [
     { id: 'tpl_sweep', label: '横なぎ骨', desc: '左右からシンプルに骨が流れてくる入門用パターン。', build: tplSimpleSweep },
     { id: 'tpl_spin', label: '回転する骨', desc: '中央で長い骨が回転し続ける。回転キーフレームの作例。', build: tplSpinner },
@@ -280,6 +305,7 @@ const Data = (() => {
     { id: 'tpl_wave', label: '波状の骨', desc: '複数の短い骨がサインカーブ状に上下する。', build: tplWave },
     { id: 'tpl_blueorange', label: '青とオレンジ', desc: '青骨は動くと被弾、オレンジ骨は止まると被弾。切り替えを体感できる。', build: tplBlueOrange },
     { id: 'tpl_blaster', label: 'ガスターブラスター', desc: '溜めてから発射するブラスター攻撃。3方向から順に撃ってくる。', build: tplBlaster },
+    { id: 'tpl_spike', label: '伸び縮みする骨', desc: '床と天井から槍のように伸び上がる骨。長さ・太さのキーフレームの作例。', build: tplGrowingSpike },
   ];
 
   return {

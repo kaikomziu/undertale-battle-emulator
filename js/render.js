@@ -3,21 +3,25 @@ const Render = (() => {
 
   function smoothstep(p) { return p * p * (3 - 2 * p); }
 
+  // キーフレームの長さ/太さ: 未指定なら骨のデフォルト値にフォールバック
+  function resolveLen(bone, k) { return (typeof k.length === 'number') ? k.length : bone.length; }
+  function resolveThick(bone, k) { return (typeof k.thickness === 'number') ? k.thickness : bone.thickness; }
+
   // 骨オブジェクトの時刻tにおける変換値をサンプリング(線形補間 / イーズ補間)
   function sampleBone(bone, t) {
     const kfs = bone.keyframes;
-    if (!kfs || kfs.length === 0) return { x: 0, y: 0, rot: 0, scale: 1, opacity: 0, visible: false };
+    if (!kfs || kfs.length === 0) return { x: 0, y: 0, rot: 0, scale: 1, opacity: 0, length: bone.length, thickness: bone.thickness, visible: false };
     if (kfs.length === 1) {
       const k = kfs[0];
-      return { x: k.x, y: k.y, rot: k.rot, scale: k.scale, opacity: k.opacity, visible: t >= k.t };
+      return { x: k.x, y: k.y, rot: k.rot, scale: k.scale, opacity: k.opacity, length: resolveLen(bone, k), thickness: resolveThick(bone, k), visible: t >= k.t };
     }
     if (t <= kfs[0].t) {
       const k = kfs[0];
-      return { x: k.x, y: k.y, rot: k.rot, scale: k.scale, opacity: k.opacity, visible: t >= k.t };
+      return { x: k.x, y: k.y, rot: k.rot, scale: k.scale, opacity: k.opacity, length: resolveLen(bone, k), thickness: resolveThick(bone, k), visible: t >= k.t };
     }
     const last = kfs[kfs.length - 1];
     if (t >= last.t) {
-      return { x: last.x, y: last.y, rot: last.rot, scale: last.scale, opacity: last.opacity, visible: true };
+      return { x: last.x, y: last.y, rot: last.rot, scale: last.scale, opacity: last.opacity, length: resolveLen(bone, last), thickness: resolveThick(bone, last), visible: true };
     }
     for (let i = 0; i < kfs.length - 1; i++) {
       const a = kfs[i], b = kfs[i + 1];
@@ -25,17 +29,21 @@ const Render = (() => {
         const span = (b.t - a.t) || 1;
         let p = (t - a.t) / span;
         if (bone.ease === 'easeInOut') p = smoothstep(p);
+        const aLen = resolveLen(bone, a), bLen = resolveLen(bone, b);
+        const aThick = resolveThick(bone, a), bThick = resolveThick(bone, b);
         return {
           x: a.x + (b.x - a.x) * p,
           y: a.y + (b.y - a.y) * p,
           rot: a.rot + (b.rot - a.rot) * p,
           scale: a.scale + (b.scale - a.scale) * p,
           opacity: a.opacity + (b.opacity - a.opacity) * p,
+          length: aLen + (bLen - aLen) * p,
+          thickness: aThick + (bThick - aThick) * p,
           visible: true,
         };
       }
     }
-    return { x: 0, y: 0, rot: 0, scale: 1, opacity: 0, visible: false };
+    return { x: 0, y: 0, rot: 0, scale: 1, opacity: 0, length: bone.length, thickness: bone.thickness, visible: false };
   }
 
   function roundRectPath(ctx, x, y, w, h, r) {
@@ -161,8 +169,8 @@ const Render = (() => {
     if (!sample.visible || sample.opacity <= 0.01) return;
     opts = opts || {};
     const [cx, cy] = tr.toCanvas(sample.x, sample.y);
-    const len = bone.length * sample.scale * tr.scale;
-    const thick = bone.thickness * sample.scale * tr.scale;
+    const len = sample.length * sample.scale * tr.scale;
+    const thick = sample.thickness * sample.scale * tr.scale;
     const hl = len / 2, ht = thick / 2;
     ctx.save();
     ctx.translate(cx, cy);
@@ -245,16 +253,16 @@ const Render = (() => {
   // 円(魂)と中心配置の回転矩形(通常/青/オレンジ骨)の当たり判定
   function circleVsCenteredRect(soulX, soulY, radius, bone, sample) {
     const [lx, ly] = toLocal(soulX, soulY, sample);
-    const hl = (bone.length * sample.scale) / 2;
-    const ht = (bone.thickness * sample.scale) / 2;
+    const hl = (sample.length * sample.scale) / 2;
+    const ht = (sample.thickness * sample.scale) / 2;
     return circleVsLocalRect(lx, ly, radius, -hl, hl, ht);
   }
 
   // 円(魂)とブラスターのビーム(原点から前方に伸びる矩形)の当たり判定
   function circleVsBeam(soulX, soulY, radius, bone, sample) {
     const [lx, ly] = toLocal(soulX, soulY, sample);
-    const len = bone.length * sample.scale;
-    const ht = (bone.thickness * sample.scale) / 2;
+    const len = sample.length * sample.scale;
+    const ht = (sample.thickness * sample.scale) / 2;
     return circleVsLocalRect(lx, ly, radius, -len / 2 * 0.15, len, ht * 0.9);
   }
 

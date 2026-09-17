@@ -26,7 +26,7 @@ const Editor = (() => {
     ['patternName', 'boneList', 'btnAddBone',
      'setDuration', 'setHp', 'setSoulSpeed', 'setDamage', 'setBoxW', 'setBoxH',
      'btnPreviewPlay', 'btnPreviewStop', 'scrubReadout', 'durReadout',
-     'boneProps', 'kfList', 'kfEditor', 'kfTime', 'kfX', 'kfY', 'kfRot', 'kfScale', 'kfOpacity',
+     'boneProps', 'kfList', 'kfEditor', 'kfTime', 'kfX', 'kfY', 'kfRot', 'kfScale', 'kfOpacity', 'kfLength', 'kfThick',
      'btnDupKf', 'btnDelKf', 'btnAddKfNow',
      'timelineScroll', 'timelineRuler', 'timelineTracks', 'playhead'].forEach(id => el[id] = qs(id));
 
@@ -119,8 +119,9 @@ const Editor = (() => {
         <option value="linear"${b.ease !== 'easeInOut' ? ' selected' : ''}>直線</option>
         <option value="easeInOut"${b.ease === 'easeInOut' ? ' selected' : ''}>イーズ</option>
       </select></label>
-      <label>長さ${b.kind === 'blaster' ? '(射程)' : ''}<input id="bpLength" type="number" min="10" max="600" step="2" value="${b.length}"></label>
-      <label>太さ${b.kind === 'blaster' ? '(ビーム幅)' : ''}<input id="bpThick" type="number" min="4" max="120" step="2" value="${b.thickness}"></label>
+      <label>長さ(初期値)${b.kind === 'blaster' ? '・射程' : ''}<input id="bpLength" type="number" min="10" max="600" step="2" value="${b.length}"></label>
+      <label>太さ(初期値)${b.kind === 'blaster' ? '・ビーム幅' : ''}<input id="bpThick" type="number" min="4" max="120" step="2" value="${b.thickness}"></label>
+      <p class="propsHint">長さ・太さはキーフレームごとに上書き可能(下のキーフレーム欄)。ここは上書きしていないキーフレームに使われる初期値。</p>
       <div class="boneBtnRow">
         <button id="bpDup" class="tbtn">複製</button>
         <button id="bpMirror" class="tbtn">反転複製</button>
@@ -134,8 +135,8 @@ const Editor = (() => {
     });
     qs('bpColor').addEventListener('input', e => { b.color = e.target.value; renderStage(); renderBoneList(); renderTimeline(); });
     qs('bpEase').addEventListener('change', e => { b.ease = e.target.value; renderStage(); });
-    qs('bpLength').addEventListener('input', e => { b.length = Number(e.target.value) || 10; renderStage(); });
-    qs('bpThick').addEventListener('input', e => { b.thickness = Number(e.target.value) || 4; renderStage(); });
+    qs('bpLength').addEventListener('input', e => { b.length = Number(e.target.value) || 10; renderStage(); renderKfList(); });
+    qs('bpThick').addEventListener('input', e => { b.thickness = Number(e.target.value) || 4; renderStage(); renderKfList(); });
     qs('bpDup').addEventListener('click', () => {
       const copy = Data.clone(b);
       copy.id = Data.uid('bone');
@@ -190,6 +191,8 @@ const Editor = (() => {
     el.kfRot.value = Math.round(selectedKf.rot);
     el.kfScale.value = selectedKf.scale;
     el.kfOpacity.value = selectedKf.opacity;
+    el.kfLength.value = Math.round(typeof selectedKf.length === 'number' ? selectedKf.length : b.length);
+    el.kfThick.value = Math.round(typeof selectedKf.thickness === 'number' ? selectedKf.thickness : b.thickness);
   }
 
   function renderTimeline() {
@@ -276,15 +279,15 @@ const Editor = (() => {
     const dx = bx - sample.x, dy = by - sample.y;
     const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
     const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
-    const hl = (bone.length * sample.scale) / 2 + 6;
-    const ht = (bone.thickness * sample.scale) / 2 + 6;
+    const hl = (sample.length * sample.scale) / 2 + 6;
+    const ht = (sample.thickness * sample.scale) / 2 + 6;
     if (Math.abs(lx) <= hl && Math.abs(ly) <= ht) return true;
     // 発射口(原点)付近を掴みやすくする
-    return Math.hypot(dx, dy) <= (bone.thickness * sample.scale) * 0.9 + 6;
+    return Math.hypot(dx, dy) <= (sample.thickness * sample.scale) * 0.9 + 6;
   }
 
   function handlePos(bone, sample) {
-    const hl = (bone.length * sample.scale) / 2 + 24 / tr.scale;
+    const hl = (sample.length * sample.scale) / 2 + 24 / tr.scale;
     const rad = sample.rot * Math.PI / 180;
     return { x: sample.x + Math.cos(rad) * hl, y: sample.y + Math.sin(rad) * hl };
   }
@@ -386,7 +389,7 @@ const Editor = (() => {
     el.btnAddBone.addEventListener('click', () => {
       const b = Data.newBone({ name: '骨' + (pattern.bones.length + 1) });
       pattern.bones.push(b);
-      selectedBoneId = b.id; selectedKf = null;
+      selectedBoneId = b.id; selectedKf = b.keyframes[0];
       renderAll();
     });
 
@@ -413,7 +416,7 @@ const Editor = (() => {
       renderKfList(); renderTimeline(); renderStage();
     });
 
-    ['kfTime', 'kfX', 'kfY', 'kfRot', 'kfScale', 'kfOpacity'].forEach(id => {
+    ['kfTime', 'kfX', 'kfY', 'kfRot', 'kfScale', 'kfOpacity', 'kfLength', 'kfThick'].forEach(id => {
       el[id].addEventListener('change', () => {
         if (!selectedKf) return;
         const b = findBone(selectedBoneId);
@@ -423,6 +426,8 @@ const Editor = (() => {
         selectedKf.rot = Number(el.kfRot.value) || 0;
         selectedKf.scale = Math.max(0.05, Number(el.kfScale.value) || 1);
         selectedKf.opacity = clamp(Number(el.kfOpacity.value), 0, 1);
+        selectedKf.length = Math.max(1, Number(el.kfLength.value) || b.length);
+        selectedKf.thickness = Math.max(1, Number(el.kfThick.value) || b.thickness);
         Data.sortKf(b);
         scrubTime = selectedKf.t;
         renderKfList(); renderTimeline(); renderStage();

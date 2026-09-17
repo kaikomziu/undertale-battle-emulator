@@ -70,6 +70,10 @@ input { font-family: inherit; }
   margin: 6px 0 8px; letter-spacing: 1px;
 }
 .panel h2:first-child { margin-top: 0; }
+.hintSmall {
+  display: block; font-family: 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font-size: 10px; color: var(--textDim); letter-spacing: 0; margin-top: 4px; text-transform: none;
+}
 
 /* ---------- bone list ---------- */
 .boneList { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
@@ -104,6 +108,7 @@ input { font-family: inherit; }
   padding: 5px 6px; border-radius: 4px; font-size: 12px; width: 100%;
 }
 .boneProps input[type=color] { padding: 2px; height: 30px; }
+.propsHint { font-size: 10px; color: var(--textDim); line-height: 1.5; margin: -2px 0 0; }
 .boneBtnRow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .boneBtnRow button { flex: 1; min-width: 70px; }
 
