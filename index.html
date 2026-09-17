@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>UNDERTALE BATTLE EMULATOR - 骨の攻撃を自作して遊べるバトルエディタ</title>
+<meta name="description" content="Undertale風の弾幕バトルを自作できるエディタ。骨(ボーン)にキーフレームを打って回転・移動・出現タイミングを作り込み、魂を動かして自分の攻撃をプレイできる。保存・書き出し・テンプレート付き。">
+<link rel="canonical" href="https://kaikomziu.github.io/undertale-battle-emulator/">
+<meta property="og:title" content="UNDERTALE BATTLE EMULATOR - 骨の攻撃を自作して遊べるバトルエディタ">
+<meta property="og:description" content="キーフレームで骨の回転・移動・攻撃パターンを作り、魂を動かして遊べるUndertale風バトルエディタ。テンプレート・保存機能あり。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kaikomziu.github.io/undertale-battle-emulator/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23000%22/><path d=%22M50 30 L58 48 L50 66 L42 48 Z%22 fill=%22%23ff0033%22/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="topbar">
+  <div class="brand">UNDERTALE<span>BATTLE EMULATOR</span></div>
+  <input id="patternName" type="text" maxlength="30" value="無題の攻撃" aria-label="攻撃の名前">
+  <div class="modeTabs">
+    <button id="tabEditor" class="modeTab active" data-mode="editor">エディタ</button>
+    <button id="tabPlay" class="modeTab" data-mode="play">プレイ</button>
+  </div>
+  <div class="topActions">
+    <button id="btnNew" class="tbtn" title="新規作成">新規</button>
+    <button id="btnLibrary" class="tbtn" title="テンプレート・保存済みを開く">ライブラリ</button>
+    <button id="btnSave" class="tbtn" title="この端末に保存">保存</button>
+    <button id="btnExport" class="tbtn" title="JSONで書き出す">書き出し</button>
+    <button id="btnImport" class="tbtn" title="JSONを読み込む">読み込み</button>
+    <input id="importFile" type="file" accept="application/json" hidden>
+    <button id="btnHelp" class="tbtn" title="使い方">?</button>
+  </div>
+</div>
+
+<main id="app">
+
+  <!-- ===================== EDITOR VIEW ===================== -->
+  <section id="editorView" class="view active">
+
+    <aside id="boneListPanel" class="panel">
+      <h2>骨オブジェクト</h2>
+      <div id="boneList" class="boneList"></div>
+      <button id="btnAddBone" class="wide">＋ 骨を追加</button>
+
+      <h2>設定</h2>
+      <div class="settingsGrid">
+        <label>攻撃時間(秒)<input id="setDuration" type="number" min="1" max="60" step="0.5"></label>
+        <label>魂HP<input id="setHp" type="number" min="1" max="999" step="1"></label>
+        <label>魂の速さ<input id="setSoulSpeed" type="number" min="30" max="500" step="10"></label>
+        <label>被ダメージ<input id="setDamage" type="number" min="1" max="99" step="1"></label>
+        <label>ボックス幅<input id="setBoxW" type="number" min="120" max="600" step="10"></label>
+        <label>ボックス高さ<input id="setBoxH" type="number" min="80" max="400" step="10"></label>
+      </div>
+    </aside>
+
+    <div id="stagePanel" class="panel">
+      <div class="stageToolbar">
+        <button id="btnPreviewPlay" class="tbtn">▶ プレビュー再生</button>
+        <button id="btnPreviewStop" class="tbtn" disabled>■ 停止</button>
+        <span class="timeReadout">t = <b id="scrubReadout">0.00</b>s / <span id="durReadout">8.00</span>s</span>
+      </div>
+      <canvas id="stageCanvas" width="640" height="420"></canvas>
+      <p class="stageHint">キャンバス上で骨をドラッグして移動、先端の丸ハンドルをドラッグして回転。現在時刻にキーフレームが自動で打たれます。</p>
+    </div>
+
+    <aside id="keyframePanel" class="panel">
+      <h2>選択中のオブジェクト</h2>
+      <div id="boneProps" class="boneProps empty">骨を選択してください</div>
+
+      <h2>キーフレーム</h2>
+      <div id="kfList" class="kfList empty">キーフレームがありません</div>
+      <div id="kfEditor" class="kfEditor hidden">
+        <label>時刻(秒)<input id="kfTime" type="number" min="0" step="0.05"></label>
+        <label>X<input id="kfX" type="number" step="1"></label>
+        <label>Y<input id="kfY" type="number" step="1"></label>
+        <label>回転(度)<input id="kfRot" type="number" step="5"></label>
+        <label>拡大率<input id="kfScale" type="number" min="0.1" max="4" step="0.05"></label>
+        <label>不透明度<input id="kfOpacity" type="number" min="0" max="1" step="0.05"></label>
+        <div class="kfEditorBtns">
+          <button id="btnDupKf" class="tbtn">複製</button>
+          <button id="btnDelKf" class="tbtn danger">削除</button>
+        </div>
+      </div>
+      <button id="btnAddKfNow" class="wide" disabled>現在時刻にキーフレームを追加</button>
+    </aside>
+
+    <div id="timelinePanel" class="panel">
+      <div id="timelineScroll">
+        <div id="timelineRuler"></div>
+        <div id="timelineTracks"></div>
+        <div id="playhead"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ===================== PLAY VIEW ===================== -->
+  <section id="playView" class="view">
+    <div class="playWrap">
+      <div class="hpRow">
+        <div class="hpLabel">SOUL</div>
+        <div class="hpBarOuter"><div id="hpBarInner"></div></div>
+        <div id="hpText">92 / 92</div>
+        <div id="playTimer">0.0s</div>
+      </div>
+      <canvas id="playCanvas" width="640" height="420"></canvas>
+      <div id="touchPad">
+        <button id="tpUp" class="tpBtn tpUp">▲</button>
+        <button id="tpLeft" class="tpBtn tpLeft">◀</button>
+        <button id="tpRight" class="tpBtn tpRight">▶</button>
+        <button id="tpDown" class="tpBtn tpDown">▼</button>
+      </div>
+      <div class="playControls">
+        <button id="btnPlayStart" class="wide primary">▶ このパターンで戦う</button>
+        <button id="btnPlayRetry" class="wide hidden">↻ もう一度</button>
+        <button id="btnPlayBackEdit" class="wide">エディタへ戻る</button>
+      </div>
+      <p class="playHint">矢印キー / WASD で魂を動かして骨を避けろ。攻撃時間を耐えきればクリア。</p>
+    </div>
+
+    <div id="playOverlay" class="playOverlay hidden">
+      <div class="playOverlayCard">
+        <h2 id="playResultTitle">YOU WON</h2>
+        <p id="playResultDesc"></p>
+        <div class="overlayBtns">
+          <button id="btnOverlayRetry" class="wide primary">↻ もう一度</button>
+          <button id="btnOverlayEdit" class="wide">エディタへ戻る</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== LIBRARY MODAL ===================== -->
+<div id="libraryModal" class="modal hidden">
+  <div class="modalCard">
+    <div class="modalHead">
+      <div class="libTabs">
+        <button id="libTabTemplates" class="libTab active" data-lib="templates">テンプレート</button>
+        <button id="libTabSaves" class="libTab" data-lib="saves">保存済み</button>
+      </div>
+      <button id="btnLibraryClose" class="tbtn">閉じる</button>
+    </div>
+    <div id="libTemplates" class="libList"></div>
+    <div id="libSaves" class="libList hidden"></div>
+  </div>
+</div>
+
+<!-- ===================== HELP MODAL ===================== -->
+<div id="helpModal" class="modal hidden">
+  <div class="modalCard">
+    <div class="modalHead">
+      <h2>あそびかた</h2>
+      <button id="btnHelpClose" class="tbtn">閉じる</button>
+    </div>
+    <div class="helpBody">
+      <h3>エディタ</h3>
+      <p>左の「骨を追加」でボーン(攻撃オブジェクト)を作成。キャンバス上でドラッグして位置を、先端の丸ハンドルで回転を操作すると、その瞬間の時刻にキーフレームが自動作成/更新されます。下のタイムラインでは各キーフレームがマーカーとして並び、クリックで選択・ドラッグで時刻を変更できます。「プレビュー再生」で攻撃全体の動きを確認できます。</p>
+      <h3>プレイ</h3>
+      <p>上部タブの「プレイ」で実際に攻撃を体験。矢印キー/WASDで魂(ハート)を動かし、骨に当たらないように攻撃時間を耐えきればクリア。被弾すると短時間無敵になります。</p>
+      <h3>保存・共有</h3>
+      <p>「保存」でこの端末(ブラウザ)に保存、「書き出し」でJSONファイルとしてダウンロード。「読み込み」でJSONファイルを読み込めます。「ライブラリ」からテンプレートや保存済みパターンを開けます。</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/data.js"></script>
+<script src="js/render.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/player.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

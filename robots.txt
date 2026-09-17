@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://kaikomziu.github.io/undertale-battle-emulator/sitemap.xml
