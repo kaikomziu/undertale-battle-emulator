@@ -250,6 +250,7 @@ const Editor = (() => {
         const t = clamp(((e.offsetX) / PX_PER_SEC) * 1000, 0, dur);
         scrubTime = t;
         renderBoneList(); renderKfList(); renderTimeline(); renderStage();
+        startTrackDrag(b, e);
       });
       el.timelineTracks.appendChild(track);
     });
@@ -270,6 +271,36 @@ const Editor = (() => {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       renderKfList(); renderTimeline(); renderStage();
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  }
+
+  // トラック全体をドラッグして、その骨の全キーフレームをまとめて時間シフトする
+  // (登場タイミングをまるごと前後にずらしたい時、一つずつキーフレームを動かさなくて済む)
+  function startTrackDrag(bone, evt) {
+    const startX = evt.clientX;
+    const originalTimes = bone.keyframes.map(k => k.t);
+    const minT = Math.min(...originalTimes);
+    const maxT = Math.max(...originalTimes);
+    const dur = pattern.settings.duration;
+    let dragging = false;
+    const move = (e) => {
+      const dxPx = e.clientX - startX;
+      if (!dragging && Math.abs(dxPx) > 4) {
+        dragging = true;
+        el.timelineTracks.classList.add('dragging');
+      }
+      if (!dragging) return;
+      let dtMs = (dxPx / PX_PER_SEC) * 1000;
+      dtMs = clamp(dtMs, -minT, dur - maxT);
+      bone.keyframes.forEach((k, i) => { k.t = Math.round(originalTimes[i] + dtMs); });
+      renderTimeline(); renderStage(); renderKfList();
+    };
+    const up = () => {
+      el.timelineTracks.classList.remove('dragging');
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
     };
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);

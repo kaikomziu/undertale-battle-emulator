@@ -149,9 +149,10 @@ input { font-family: inherit; }
 #timelineTracks { position: relative; }
 .track {
   position: relative; height: 30px; border-bottom: 1px solid #222;
-  background: var(--panel2); margin-top: 2px; border-radius: 3px;
+  background: var(--panel2); margin-top: 2px; border-radius: 3px; cursor: grab; touch-action: none;
 }
 .track.selected { outline: 1px solid var(--accent); }
+#timelineTracks.dragging .track { cursor: grabbing; }
 .trackLabel {
   position: sticky; left: 0; display: inline-block; font-size: 9px; color: var(--textDim);
   background: var(--panel2); padding: 2px 6px; border-right: 1px solid var(--border);
