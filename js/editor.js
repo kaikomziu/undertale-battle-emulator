@@ -27,7 +27,7 @@ const Editor = (() => {
      'setDuration', 'setHp', 'setSoulSpeed', 'setDamage', 'setBoxW', 'setBoxH',
      'btnPreviewPlay', 'btnPreviewStop', 'scrubReadout', 'durReadout',
      'boneProps', 'kfList', 'kfEditor', 'kfTime', 'kfX', 'kfY', 'kfRot', 'kfScale', 'kfOpacity', 'kfLength', 'kfThick',
-     'btnDupKf', 'btnDelKf', 'btnAddKfNow',
+     'btnDupKf', 'btnDelKf', 'btnAddKfNow', 'btnShowNow', 'btnHideNow',
      'timelineScroll', 'timelineRuler', 'timelineTracks', 'playhead'].forEach(id => el[id] = qs(id));
 
     el.newBoneKind.innerHTML = Object.keys(Data.KIND_DEFAULTS).map(k =>
@@ -166,6 +166,8 @@ const Editor = (() => {
   function renderKfList() {
     const b = findBone(selectedBoneId);
     el.btnAddKfNow.disabled = !b;
+    el.btnShowNow.disabled = !b;
+    el.btnHideNow.disabled = !b;
     if (!b || b.keyframes.length === 0) {
       el.kfList.className = 'kfList empty';
       el.kfList.textContent = b ? 'キーフレームがありません' : '';
@@ -421,6 +423,20 @@ const Editor = (() => {
       const b = findBone(selectedBoneId);
       if (!b) return;
       upsertKfAtScrub(b, {});
+      renderKfList(); renderTimeline(); renderStage();
+    });
+
+    el.btnShowNow.addEventListener('click', () => {
+      const b = findBone(selectedBoneId);
+      if (!b) return;
+      upsertKfAtScrub(b, { opacity: 1 });
+      renderKfList(); renderTimeline(); renderStage();
+    });
+
+    el.btnHideNow.addEventListener('click', () => {
+      const b = findBone(selectedBoneId);
+      if (!b) return;
+      upsertKfAtScrub(b, { opacity: 0 });
       renderKfList(); renderTimeline(); renderStage();
     });
 

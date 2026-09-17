@@ -138,6 +138,8 @@ input { font-family: inherit; }
 }
 .kfEditorBtns { grid-column: 1 / span 2; display: flex; gap: 6px; }
 .kfEditorBtns button { flex: 1; }
+.kfQuickBtns { display: flex; gap: 6px; margin-bottom: 8px; }
+.kfQuickBtns button { flex: 1; }
 
 /* ---------- timeline ---------- */
 #timelinePanel { overflow: auto; padding: 6px 10px; }
