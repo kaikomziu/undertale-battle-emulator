@@ -29,12 +29,73 @@ const Main = (() => {
     }
   }
 
+  let communityCache = null;
+
   function openLibrary() {
     renderTemplateList();
     renderSaveList();
     el.libraryModal.classList.remove('hidden');
   }
   function closeLibrary() { el.libraryModal.classList.add('hidden'); }
+
+  function switchLibTab(name) {
+    const tabs = { templates: [el.libTabTemplates, el.libTemplates], saves: [el.libTabSaves, el.libSaves], community: [el.libTabCommunity, el.libCommunity] };
+    Object.keys(tabs).forEach(k => {
+      const [tabBtn, panel] = tabs[k];
+      tabBtn.classList.toggle('active', k === name);
+      panel.classList.toggle('hidden', k !== name);
+    });
+    if (name === 'community' && !communityCache) loadCommunityList();
+  }
+
+  async function loadCommunityList(force) {
+    el.communityStatus.textContent = '読み込み中...';
+    el.communityStatus.classList.remove('hidden');
+    el.communityList.innerHTML = '';
+    try {
+      const rows = await Community.fetchLatest(60);
+      communityCache = rows;
+      renderCommunityList(rows);
+    } catch (err) {
+      el.communityStatus.textContent = '読み込みに失敗しました(通信環境をご確認ください)';
+    }
+  }
+
+  function renderCommunityList(rows) {
+    if (!rows || rows.length === 0) {
+      el.communityStatus.textContent = 'まだ誰も公開していません。最初の投稿者になろう!';
+      el.communityStatus.classList.remove('hidden');
+      el.communityList.innerHTML = '';
+      return;
+    }
+    el.communityStatus.classList.add('hidden');
+    el.communityList.innerHTML = '';
+    rows.forEach(row => {
+      const div = document.createElement('div');
+      div.className = 'libRow communityRow';
+      const date = new Date(row.created_at).toLocaleString('ja-JP');
+      const authorHtml = row.author ? `<span class="libAuthor">by ${escapeHtml(row.author)}</span>` : '';
+      div.innerHTML = `<div class="libInfo"><b>${escapeHtml(row.name)}</b>${authorHtml}<span>公開: ${date}</span></div>
+        <button class="tbtn primary" data-act="load">開く</button>`;
+      div.querySelector('[data-act=load]').addEventListener('click', () => {
+        if (!confirm('現在編集中の内容は失われます。読み込みますか?')) return;
+        const p = Data.clone(row.pattern);
+        p.id = Data.uid('pat');
+        Editor.setPattern(p);
+        closeLibrary();
+        toast('読み込みました');
+      });
+      el.communityList.appendChild(div);
+    });
+  }
+
+  function openPublishModal() {
+    const p = Editor.getPattern();
+    el.publishPatternName.textContent = p.name;
+    el.publishAuthor.value = Community.getAuthorName();
+    el.publishModal.classList.remove('hidden');
+  }
+  function closePublishModal() { el.publishModal.classList.add('hidden'); }
 
   function renderTemplateList() {
     el.libTemplates.innerHTML = '';
@@ -116,13 +177,29 @@ const Main = (() => {
     el.btnLibraryClose.addEventListener('click', closeLibrary);
     el.libraryModal.addEventListener('click', (e) => { if (e.target === el.libraryModal) closeLibrary(); });
 
-    el.libTabTemplates.addEventListener('click', () => {
-      el.libTabTemplates.classList.add('active'); el.libTabSaves.classList.remove('active');
-      el.libTemplates.classList.remove('hidden'); el.libSaves.classList.add('hidden');
-    });
-    el.libTabSaves.addEventListener('click', () => {
-      el.libTabSaves.classList.add('active'); el.libTabTemplates.classList.remove('active');
-      el.libSaves.classList.remove('hidden'); el.libTemplates.classList.add('hidden');
+    el.libTabTemplates.addEventListener('click', () => switchLibTab('templates'));
+    el.libTabSaves.addEventListener('click', () => switchLibTab('saves'));
+    el.libTabCommunity.addEventListener('click', () => switchLibTab('community'));
+
+    el.btnPublish.addEventListener('click', openPublishModal);
+    el.btnPublishClose.addEventListener('click', closePublishModal);
+    el.publishModal.addEventListener('click', (e) => { if (e.target === el.publishModal) closePublishModal(); });
+    el.btnPublishConfirm.addEventListener('click', async () => {
+      const p = Editor.getPattern();
+      const author = el.publishAuthor.value.trim();
+      Community.setAuthorName(author);
+      el.btnPublishConfirm.disabled = true;
+      el.btnPublishConfirm.textContent = '公開中...';
+      try {
+        await Community.publish(p, author);
+        closePublishModal();
+        communityCache = null;
+        toast(`「${p.name}」を公開しました`);
+      } catch (err) {
+        toast(err && err.message === 'too_large' ? 'データが大きすぎて公開できません' : '公開に失敗しました(通信環境をご確認ください)');
+      }
+      el.btnPublishConfirm.disabled = false;
+      el.btnPublishConfirm.textContent = 'この内容で公開する';
     });
 
     el.btnSave.addEventListener('click', () => {
@@ -165,6 +242,8 @@ const Main = (() => {
   function init() {
     ['tabEditor', 'tabPlay', 'editorView', 'playView', 'toast',
      'libraryModal', 'libTemplates', 'libSaves', 'libTabTemplates', 'libTabSaves', 'btnLibrary', 'btnLibraryClose',
+     'libTabCommunity', 'libCommunity', 'communityStatus', 'communityList',
+     'publishModal', 'publishPatternName', 'publishAuthor', 'btnPublish', 'btnPublishClose', 'btnPublishConfirm',
      'btnNew', 'btnDupPattern', 'btnSave', 'btnExport', 'btnImport', 'importFile',
      'helpModal', 'btnHelp', 'btnHelpClose', 'btnSound'].forEach(id => el[id] = qs(id));
 
