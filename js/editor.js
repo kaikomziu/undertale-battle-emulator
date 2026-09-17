@@ -1,6 +1,9 @@
 // ===== エディタ画面のロジック =====
 const Editor = (() => {
-  const PX_PER_SEC = 90;
+  const PX_PER_SEC_DEFAULT = 90;
+  const PX_PER_SEC_MIN = 30;
+  const PX_PER_SEC_MAX = 240;
+  let PX_PER_SEC = PX_PER_SEC_DEFAULT;
   const KF_EPS = 10; // ms
 
   let pattern = null;
@@ -28,7 +31,8 @@ const Editor = (() => {
      'btnPreviewPlay', 'btnPreviewStop', 'scrubReadout', 'durReadout',
      'boneProps', 'kfList', 'kfEditor', 'kfTime', 'kfX', 'kfY', 'kfRot', 'kfScale', 'kfOpacity', 'kfLength', 'kfThick',
      'btnDupKf', 'btnDelKf', 'btnAddKfNow', 'btnShowNow', 'btnHideNow',
-     'timelineScroll', 'timelineRuler', 'timelineTracks', 'playhead'].forEach(id => el[id] = qs(id));
+     'timelineScroll', 'timelineRuler', 'timelineTracks', 'playhead',
+     'btnZoomIn', 'btnZoomOut', 'zoomReadout'].forEach(id => el[id] = qs(id));
 
     el.newBoneKind.innerHTML = Object.keys(Data.KIND_DEFAULTS).map(k =>
       `<option value="${k}">${Data.KIND_DEFAULTS[k].label}</option>`).join('');
@@ -205,6 +209,12 @@ const Editor = (() => {
     el.kfThick.value = Math.round(typeof selectedKf.thickness === 'number' ? selectedKf.thickness : b.thickness);
   }
 
+  function setZoom(px) {
+    PX_PER_SEC = clamp(px, PX_PER_SEC_MIN, PX_PER_SEC_MAX);
+    el.zoomReadout.textContent = Math.round((PX_PER_SEC / PX_PER_SEC_DEFAULT) * 100) + '%';
+    renderTimeline();
+  }
+
   function renderTimeline() {
     const dur = pattern.settings.duration;
     const width = Math.max(300, (dur / 1000) * PX_PER_SEC + 40);
@@ -212,7 +222,8 @@ const Editor = (() => {
     el.timelineTracks.style.width = width + 'px';
 
     el.timelineRuler.innerHTML = '';
-    const step = dur > 20000 ? 2 : 1;
+    const stepCandidates = [0.5, 1, 2, 5, 10, 20];
+    const step = stepCandidates.find(s => s * PX_PER_SEC >= 60) || 20;
     for (let sec = 0; sec <= dur / 1000 + 0.001; sec += step) {
       const tick = document.createElement('div');
       tick.className = 'tick';
@@ -454,6 +465,9 @@ const Editor = (() => {
 
     el.btnPreviewPlay.addEventListener('click', startPreview);
     el.btnPreviewStop.addEventListener('click', stopPreview);
+
+    el.btnZoomIn.addEventListener('click', () => setZoom(PX_PER_SEC * 1.3));
+    el.btnZoomOut.addEventListener('click', () => setZoom(PX_PER_SEC / 1.3));
 
     el.btnAddKfNow.addEventListener('click', () => {
       const b = findBone(selectedBoneId);

@@ -143,6 +143,8 @@ input { font-family: inherit; }
 
 /* ---------- timeline ---------- */
 #timelinePanel { overflow: auto; padding: 6px 10px; }
+.timelineToolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; position: sticky; left: 0; width: fit-content; }
+.timelineToolbar .tbtn { padding: 4px 10px; }
 #timelineScroll { position: relative; min-width: 100%; width: max-content; }
 #timelineRuler { position: relative; height: 20px; border-bottom: 1px solid var(--border); }
 .tick { position: absolute; top: 0; font-size: 9px; color: var(--textDim); border-left: 1px solid var(--border); padding-left: 3px; height: 100%; }
