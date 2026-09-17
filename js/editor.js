@@ -125,6 +125,9 @@ const Editor = (() => {
       <label>長さ(初期値)${b.kind === 'blaster' ? '・射程' : ''}<input id="bpLength" type="number" min="10" max="600" step="2" value="${b.length}"></label>
       <label>太さ(初期値)${b.kind === 'blaster' ? '・ビーム幅' : ''}<input id="bpThick" type="number" min="4" max="120" step="2" value="${b.thickness}"></label>
       <p class="propsHint">長さ・太さはキーフレームごとに上書き可能(下のキーフレーム欄)。ここは上書きしていないキーフレームに使われる初期値。</p>
+      <label>ランダム幅(±ms)<input id="bpJitter" type="number" min="0" max="5000" step="50" value="${b.jitter || 0}"></label>
+      <label>ランダムグループ(任意)<input id="bpJitterGroup" type="text" maxlength="20" value="${escapeAttr(b.jitterGroup || '')}" placeholder="空欄なら単独で揺れる"></label>
+      <p class="propsHint">プレイ開始のたびに、この骨のタイミングを±ランダム幅の範囲でずらす。同じ「ランダムグループ」名を持つ骨同士は必ず同じだけずれる(壁の隙間など複数の骨を連動させたい時に使う)。パターンを覚えられてしまう問題を防ぐための機能。</p>
       <div class="boneBtnRow">
         <button id="bpDup" class="tbtn">複製</button>
         <button id="bpMirror" class="tbtn">反転複製</button>
@@ -140,6 +143,8 @@ const Editor = (() => {
     qs('bpEase').addEventListener('change', e => { b.ease = e.target.value; renderStage(); });
     qs('bpLength').addEventListener('input', e => { b.length = Number(e.target.value) || 10; renderStage(); renderKfList(); });
     qs('bpThick').addEventListener('input', e => { b.thickness = Number(e.target.value) || 4; renderStage(); renderKfList(); });
+    qs('bpJitter').addEventListener('input', e => { b.jitter = Math.max(0, Number(e.target.value) || 0); });
+    qs('bpJitterGroup').addEventListener('input', e => { b.jitterGroup = e.target.value; });
     qs('bpDup').addEventListener('click', () => {
       const copy = Data.clone(b);
       copy.id = Data.uid('bone');

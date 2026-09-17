@@ -16,6 +16,7 @@ const Player = (() => {
   let shakeUntil = 0;
   let flashUntil = 0;
   let soulMoving = false;
+  let boneOffsets = {};
 
   const keys = { up: false, down: false, left: false, right: false };
   const el = {};
@@ -106,6 +107,7 @@ const Player = (() => {
     shakeUntil = 0;
     flashUntil = 0;
     soulMoving = false;
+    boneOffsets = rollBoneOffsets(pattern.bones);
     Object.keys(keys).forEach(k => keys[k] = false);
     el.btnPlayStart.classList.add('hidden');
     el.btnPlayRetry.classList.remove('hidden');
@@ -120,6 +122,24 @@ const Player = (() => {
   function stop() {
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;
+  }
+
+  // 骨ごとの時間ズレをプレイ開始時に一度だけ抽選する。
+  // 同じ jitterGroup を持つ骨は同じズレを共有する(壁の隙間など連動が必要な骨をまとめて揺らせる)。
+  function rollBoneOffsets(bones) {
+    const groupRolls = {};
+    const offsets = {};
+    bones.forEach(b => {
+      if (!b.jitter) { offsets[b.id] = 0; return; }
+      const key = b.jitterGroup || b.id;
+      if (!(key in groupRolls)) groupRolls[key] = (Math.random() * 2 - 1) * b.jitter;
+      offsets[b.id] = groupRolls[key];
+    });
+    return offsets;
+  }
+
+  function boneTime(b) {
+    return elapsed - (boneOffsets[b.id] || 0);
   }
 
   function loop(ts) {
@@ -148,7 +168,7 @@ const Player = (() => {
     const now = performance.now();
     if (now >= invincibleUntil) {
       for (const b of pattern.bones) {
-        const sample = Render.sampleBone(b, elapsed);
+        const sample = Render.sampleBone(b, boneTime(b));
         if (Render.hitTest(soulX, soulY, SOUL_RADIUS, b, sample, soulMoving)) {
           hp = Math.max(0, hp - s.damage);
           invincibleUntil = now + INVINCIBLE_MS;
@@ -180,7 +200,7 @@ const Player = (() => {
     }
     Render.drawBox(ctx, tr, s.boxW, s.boxH);
     pattern.bones.forEach(b => {
-      const sample = Render.sampleBone(b, elapsed);
+      const sample = Render.sampleBone(b, boneTime(b));
       Render.drawBone(ctx, tr, b, sample, {});
     });
     const blink = now < invincibleUntil && Math.floor(now / 90) % 2 === 0;

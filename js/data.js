@@ -32,6 +32,8 @@ const Data = (() => {
       color: '#f5f5f5',
       length: 90,
       thickness: 16,
+      jitter: 0,
+      jitterGroup: '',
       keyframes: [
         { t: 0, x: 0, y: 0, rot: 0, scale: 1, opacity: 1 },
       ],
