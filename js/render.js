@@ -1,7 +1,9 @@
 // ===== 共通レンダリング / 補間 / 当たり判定 =====
 const Render = (() => {
 
-  // 骨オブジェクトの時刻tにおける変換値をサンプリング(線形補間)
+  function smoothstep(p) { return p * p * (3 - 2 * p); }
+
+  // 骨オブジェクトの時刻tにおける変換値をサンプリング(線形補間 / イーズ補間)
   function sampleBone(bone, t) {
     const kfs = bone.keyframes;
     if (!kfs || kfs.length === 0) return { x: 0, y: 0, rot: 0, scale: 1, opacity: 0, visible: false };
@@ -21,7 +23,8 @@ const Render = (() => {
       const a = kfs[i], b = kfs[i + 1];
       if (t >= a.t && t <= b.t) {
         const span = (b.t - a.t) || 1;
-        const p = (t - a.t) / span;
+        let p = (t - a.t) / span;
+        if (bone.ease === 'easeInOut') p = smoothstep(p);
         return {
           x: a.x + (b.x - a.x) * p,
           y: a.y + (b.y - a.y) * p,
@@ -71,25 +74,105 @@ const Render = (() => {
     ctx.restore();
   }
 
+  function drawBonePill(ctx, bone, hl, ht) {
+    ctx.fillStyle = bone.color || '#f5f5f5';
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = Math.max(1, ht * 0.12);
+    roundRectPath(ctx, -hl, -ht, hl * 2, ht * 2, ht);
+    ctx.fill(); ctx.stroke();
+    const knobRy = ht * 1.4, knobRx = ht * 0.75;
+    ctx.beginPath(); ctx.ellipse(-hl, 0, knobRx, knobRy, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(hl, 0, knobRx, knobRy, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (bone.kind === 'blue') {
+      // 「動くと危険」を示す進行方向シェブロン
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = Math.max(1.5, ht * 0.16);
+      ctx.lineCap = 'round';
+      const n = Math.max(1, Math.floor((hl * 2) / (ht * 3)));
+      for (let i = 0; i < n; i++) {
+        const cxp = -hl + (i + 0.5) * (hl * 2 / n);
+        ctx.beginPath();
+        ctx.moveTo(cxp - ht * 0.35, -ht * 0.4);
+        ctx.lineTo(cxp + ht * 0.35, 0);
+        ctx.lineTo(cxp - ht * 0.35, ht * 0.4);
+        ctx.stroke();
+      }
+    } else if (bone.kind === 'orange') {
+      // 「止まると危険」を示す停止マーク
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      const r = ht * 0.32;
+      const n = Math.max(1, Math.floor((hl * 2) / (ht * 3)));
+      for (let i = 0; i < n; i++) {
+        const cxp = -hl + (i + 0.5) * (hl * 2 / n);
+        ctx.beginPath();
+        ctx.arc(cxp, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawBlaster(ctx, bone, sample, hl, ht) {
+    const firing = sample.opacity >= 0.6;
+    const muzzleR = ht;
+    // 溜め中のグロー
+    if (!firing) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, sample.opacity)) * 0.9;
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, muzzleR * 1.8);
+      g.addColorStop(0, bone.color || '#eaf6ff');
+      g.addColorStop(1, 'rgba(234,246,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, muzzleR * 1.8, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+    // 発射ビーム
+    if (firing) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, sample.opacity));
+      const beamLen = hl * 2 - muzzleR * 0.6;
+      const g = ctx.createLinearGradient(muzzleR * 0.4, 0, muzzleR * 0.4 + beamLen, 0);
+      g.addColorStop(0, bone.color || '#eaf6ff');
+      g.addColorStop(1, 'rgba(234,246,255,0.55)');
+      ctx.fillStyle = g;
+      roundRectPath(ctx, muzzleR * 0.4, -ht, beamLen, ht * 2, ht * 0.3);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      roundRectPath(ctx, muzzleR * 0.4, -ht * 0.35, beamLen, ht * 0.7, ht * 0.2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // 発射口(キャノン)
+    ctx.save();
+    ctx.globalAlpha = Math.max(0.35, Math.min(1, sample.opacity));
+    ctx.fillStyle = '#2a2a33';
+    ctx.strokeStyle = firing ? '#eaf6ff' : 'rgba(234,246,255,0.6)';
+    ctx.lineWidth = Math.max(2, ht * 0.12);
+    roundRectPath(ctx, -muzzleR * 1.1, -ht, muzzleR * 1.5, ht * 2, ht * 0.4);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(-muzzleR * 0.3, -ht * 0.4, ht * 0.18, 0, Math.PI * 2);
+    ctx.arc(-muzzleR * 0.3, ht * 0.4, ht * 0.18, 0, Math.PI * 2);
+    ctx.fillStyle = firing ? '#ff5566' : '#5a5a66';
+    ctx.fill();
+    ctx.restore();
+  }
+
   function drawBone(ctx, tr, bone, sample, opts) {
     if (!sample.visible || sample.opacity <= 0.01) return;
     opts = opts || {};
     const [cx, cy] = tr.toCanvas(sample.x, sample.y);
     const len = bone.length * sample.scale * tr.scale;
     const thick = bone.thickness * sample.scale * tr.scale;
+    const hl = len / 2, ht = thick / 2;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(sample.rot * Math.PI / 180);
-    ctx.globalAlpha = Math.max(0, Math.min(1, sample.opacity));
-    const hl = len / 2, ht = thick / 2;
-    ctx.fillStyle = bone.color || '#f5f5f5';
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-    ctx.lineWidth = Math.max(1, thick * 0.06);
-    roundRectPath(ctx, -hl, -ht, len, thick, ht);
-    ctx.fill(); ctx.stroke();
-    const knobRy = ht * 1.4, knobRx = ht * 0.75;
-    ctx.beginPath(); ctx.ellipse(-hl, 0, knobRx, knobRy, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(hl, 0, knobRx, knobRy, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (bone.kind === 'blaster') {
+      drawBlaster(ctx, bone, sample, hl, ht);
+    } else {
+      ctx.globalAlpha = Math.max(0, Math.min(1, sample.opacity));
+      drawBonePill(ctx, bone, hl, ht);
+    }
     ctx.restore();
 
     if (opts.selected) {
@@ -145,20 +228,52 @@ const Render = (() => {
     ctx.restore();
   }
 
-  // 円(魂)と回転矩形(骨)の当たり判定
-  function circleVsBone(soulX, soulY, radius, bone, sample) {
-    if (!sample.visible || sample.opacity <= 0.08) return false;
-    const rad = -sample.rot * Math.PI / 180;
-    const dx = soulX - sample.x, dy = soulY - sample.y;
-    const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
-    const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
-    const hl = (bone.length * sample.scale) / 2;
-    const ht = (bone.thickness * sample.scale) / 2;
-    const cxl = Math.max(-hl, Math.min(hl, lx));
+  // 円(魂)とローカル座標での矩形(x範囲[x0,x1], y範囲[-ht,ht])の当たり判定
+  function circleVsLocalRect(lx, ly, radius, x0, x1, ht) {
+    const cxl = Math.max(x0, Math.min(x1, lx));
     const cyl = Math.max(-ht, Math.min(ht, ly));
     const ddx = lx - cxl, ddy = ly - cyl;
     return (ddx * ddx + ddy * ddy) < radius * radius;
   }
 
-  return { sampleBone, makeTransform, drawBox, drawBone, drawSoul, circleVsBone, roundRectPath };
+  function toLocal(soulX, soulY, sample) {
+    const rad = -sample.rot * Math.PI / 180;
+    const dx = soulX - sample.x, dy = soulY - sample.y;
+    return [dx * Math.cos(rad) - dy * Math.sin(rad), dx * Math.sin(rad) + dy * Math.cos(rad)];
+  }
+
+  // 円(魂)と中心配置の回転矩形(通常/青/オレンジ骨)の当たり判定
+  function circleVsCenteredRect(soulX, soulY, radius, bone, sample) {
+    const [lx, ly] = toLocal(soulX, soulY, sample);
+    const hl = (bone.length * sample.scale) / 2;
+    const ht = (bone.thickness * sample.scale) / 2;
+    return circleVsLocalRect(lx, ly, radius, -hl, hl, ht);
+  }
+
+  // 円(魂)とブラスターのビーム(原点から前方に伸びる矩形)の当たり判定
+  function circleVsBeam(soulX, soulY, radius, bone, sample) {
+    const [lx, ly] = toLocal(soulX, soulY, sample);
+    const len = bone.length * sample.scale;
+    const ht = (bone.thickness * sample.scale) / 2;
+    return circleVsLocalRect(lx, ly, radius, -len / 2 * 0.15, len, ht * 0.9);
+  }
+
+  // 骨の種類(通常/青/オレンジ/ブラスター)に応じた被弾判定
+  // soulMoving: この瞬間に魂が移動入力をしているか(青/オレンジの判定に使用)
+  function hitTest(soulX, soulY, radius, bone, sample, soulMoving) {
+    if (!sample.visible || sample.opacity <= 0.08) return false;
+    if (bone.kind === 'blaster') {
+      if (sample.opacity < 0.6) return false; // 溜め中は無害
+      return circleVsBeam(soulX, soulY, radius, bone, sample);
+    }
+    if (!circleVsCenteredRect(soulX, soulY, radius, bone, sample)) return false;
+    if (bone.kind === 'blue') return !!soulMoving;   // 青: 動いていると被弾
+    if (bone.kind === 'orange') return !soulMoving;  // オレンジ: 止まっていると被弾
+    return true; // 通常: 触れたら常に被弾
+  }
+
+  return {
+    sampleBone, makeTransform, drawBox, drawBone, drawSoul,
+    circleVsCenteredRect, circleVsBeam, hitTest, roundRectPath,
+  };
 })();

@@ -99,13 +99,13 @@ input { font-family: inherit; }
 .boneProps { display: flex; flex-direction: column; gap: 8px; font-size: 11px; margin-bottom: 10px; }
 .boneProps.empty { color: var(--textDim); }
 .boneProps label { display: flex; flex-direction: column; gap: 4px; color: var(--textDim); }
-.boneProps input {
+.boneProps input, .boneProps select {
   background: var(--panel2); border: 2px solid var(--border); color: var(--text);
   padding: 5px 6px; border-radius: 4px; font-size: 12px; width: 100%;
 }
 .boneProps input[type=color] { padding: 2px; height: 30px; }
-.boneBtnRow { display: flex; gap: 6px; margin-top: 4px; }
-.boneBtnRow button { flex: 1; }
+.boneBtnRow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.boneBtnRow button { flex: 1; min-width: 70px; }
 
 .kfList { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
 .kfList.empty { color: var(--textDim); font-size: 11px; }

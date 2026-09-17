@@ -143,13 +143,20 @@ const Main = (() => {
     el.btnHelp.addEventListener('click', () => el.helpModal.classList.remove('hidden'));
     el.btnHelpClose.addEventListener('click', () => el.helpModal.classList.add('hidden'));
     el.helpModal.addEventListener('click', (e) => { if (e.target === el.helpModal) el.helpModal.classList.add('hidden'); });
+
+    el.btnSound.textContent = Sfx.isEnabled() ? '🔊' : '🔇';
+    el.btnSound.addEventListener('click', () => {
+      Sfx.setEnabled(!Sfx.isEnabled());
+      el.btnSound.textContent = Sfx.isEnabled() ? '🔊' : '🔇';
+      if (Sfx.isEnabled()) Sfx.blip();
+    });
   }
 
   function init() {
     ['tabEditor', 'tabPlay', 'editorView', 'playView', 'toast',
      'libraryModal', 'libTemplates', 'libSaves', 'libTabTemplates', 'libTabSaves', 'btnLibrary', 'btnLibraryClose',
      'btnNew', 'btnSave', 'btnExport', 'btnImport', 'importFile',
-     'helpModal', 'btnHelp', 'btnHelpClose'].forEach(id => el[id] = qs(id));
+     'helpModal', 'btnHelp', 'btnHelpClose', 'btnSound'].forEach(id => el[id] = qs(id));
 
     Editor.init(Data.TEMPLATES[0].build());
     Player.init();

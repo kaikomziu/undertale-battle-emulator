@@ -109,23 +109,43 @@ const Editor = (() => {
     const b = findBone(selectedBoneId);
     if (!b) { el.boneProps.className = 'boneProps empty'; el.boneProps.textContent = '骨を選択してください'; return; }
     el.boneProps.className = 'boneProps';
+    const kindOptions = Object.keys(Data.KIND_DEFAULTS).map(k =>
+      `<option value="${k}"${b.kind === k ? ' selected' : ''}>${Data.KIND_DEFAULTS[k].label}</option>`).join('');
     el.boneProps.innerHTML = `
       <label>名前<input id="bpName" type="text" value="${escapeAttr(b.name)}" maxlength="16"></label>
+      <label>種類<select id="bpKind">${kindOptions}</select></label>
       <label>色<input id="bpColor" type="color" value="${b.color}"></label>
-      <label>長さ<input id="bpLength" type="number" min="10" max="500" step="2" value="${b.length}"></label>
-      <label>太さ<input id="bpThick" type="number" min="4" max="120" step="2" value="${b.thickness}"></label>
+      <label>補間<select id="bpEase">
+        <option value="linear"${b.ease !== 'easeInOut' ? ' selected' : ''}>直線</option>
+        <option value="easeInOut"${b.ease === 'easeInOut' ? ' selected' : ''}>イーズ</option>
+      </select></label>
+      <label>長さ${b.kind === 'blaster' ? '(射程)' : ''}<input id="bpLength" type="number" min="10" max="600" step="2" value="${b.length}"></label>
+      <label>太さ${b.kind === 'blaster' ? '(ビーム幅)' : ''}<input id="bpThick" type="number" min="4" max="120" step="2" value="${b.thickness}"></label>
       <div class="boneBtnRow">
         <button id="bpDup" class="tbtn">複製</button>
+        <button id="bpMirror" class="tbtn">反転複製</button>
         <button id="bpDel" class="tbtn danger">削除</button>
       </div>`;
     qs('bpName').addEventListener('input', e => { b.name = e.target.value || '骨'; renderBoneList(); });
-    qs('bpColor').addEventListener('input', e => { b.color = e.target.value; renderStage(); });
+    qs('bpKind').addEventListener('change', e => {
+      b.kind = e.target.value;
+      b.color = Data.KIND_DEFAULTS[b.kind].color;
+      renderBoneProps(); renderStage(); renderBoneList();
+    });
+    qs('bpColor').addEventListener('input', e => { b.color = e.target.value; renderStage(); renderBoneList(); renderTimeline(); });
+    qs('bpEase').addEventListener('change', e => { b.ease = e.target.value; renderStage(); });
     qs('bpLength').addEventListener('input', e => { b.length = Number(e.target.value) || 10; renderStage(); });
     qs('bpThick').addEventListener('input', e => { b.thickness = Number(e.target.value) || 4; renderStage(); });
     qs('bpDup').addEventListener('click', () => {
       const copy = Data.clone(b);
       copy.id = Data.uid('bone');
       copy.name = b.name + 'コピー';
+      pattern.bones.push(copy);
+      selectedBoneId = copy.id; selectedKf = null;
+      renderAll();
+    });
+    qs('bpMirror').addEventListener('click', () => {
+      const copy = Data.mirrorBone(b);
       pattern.bones.push(copy);
       selectedBoneId = copy.id; selectedKf = null;
       renderAll();
@@ -201,6 +221,7 @@ const Editor = (() => {
         const marker = document.createElement('div');
         marker.className = 'kfMarker' + (k === selectedKf && b.id === selectedBoneId ? ' selected' : '');
         marker.style.left = ((k.t / 1000) * PX_PER_SEC) + 'px';
+        if (!(k === selectedKf && b.id === selectedBoneId)) marker.style.background = b.color;
         marker.title = (k.t / 1000).toFixed(2) + 's';
         marker.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
@@ -257,7 +278,9 @@ const Editor = (() => {
     const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
     const hl = (bone.length * sample.scale) / 2 + 6;
     const ht = (bone.thickness * sample.scale) / 2 + 6;
-    return Math.abs(lx) <= hl && Math.abs(ly) <= ht;
+    if (Math.abs(lx) <= hl && Math.abs(ly) <= ht) return true;
+    // 発射口(原点)付近を掴みやすくする
+    return Math.hypot(dx, dy) <= (bone.thickness * sample.scale) * 0.9 + 6;
   }
 
   function handlePos(bone, sample) {

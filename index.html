@@ -32,6 +32,7 @@
     <button id="btnExport" class="tbtn" title="JSONで書き出す">書き出し</button>
     <button id="btnImport" class="tbtn" title="JSONを読み込む">読み込み</button>
     <input id="importFile" type="file" accept="application/json" hidden>
+    <button id="btnSound" class="tbtn" title="効果音のオン/オフ">🔊</button>
     <button id="btnHelp" class="tbtn" title="使い方">?</button>
   </div>
 </div>
@@ -64,7 +65,7 @@
         <span class="timeReadout">t = <b id="scrubReadout">0.00</b>s / <span id="durReadout">8.00</span>s</span>
       </div>
       <canvas id="stageCanvas" width="640" height="420"></canvas>
-      <p class="stageHint">キャンバス上で骨をドラッグして移動、先端の丸ハンドルをドラッグして回転。現在時刻にキーフレームが自動で打たれます。</p>
+      <p class="stageHint">キャンバス上で骨をドラッグして移動、先端の丸ハンドルをドラッグして回転。現在時刻にキーフレームが自動で打たれます。「種類」で通常/青(動くと被弾)/オレンジ(止まると被弾)/ブラスター(溜めて発射)を切り替え可能。</p>
     </div>
 
     <aside id="keyframePanel" class="panel">
@@ -119,7 +120,7 @@
         <button id="btnPlayRetry" class="wide hidden">↻ もう一度</button>
         <button id="btnPlayBackEdit" class="wide">エディタへ戻る</button>
       </div>
-      <p class="playHint">矢印キー / WASD で魂を動かして骨を避けろ。攻撃時間を耐えきればクリア。</p>
+      <p class="playHint">矢印キー / WASD で魂を動かして骨を避けろ。攻撃時間を耐えきればクリア。<br>青骨は動くと被弾、オレンジ骨は止まると被弾。ブラスターは発射中(明るく光った瞬間)だけ危険。</p>
     </div>
 
     <div id="playOverlay" class="playOverlay hidden">
@@ -160,11 +161,13 @@
     </div>
     <div class="helpBody">
       <h3>エディタ</h3>
-      <p>左の「骨を追加」でボーン(攻撃オブジェクト)を作成。キャンバス上でドラッグして位置を、先端の丸ハンドルで回転を操作すると、その瞬間の時刻にキーフレームが自動作成/更新されます。下のタイムラインでは各キーフレームがマーカーとして並び、クリックで選択・ドラッグで時刻を変更できます。「プレビュー再生」で攻撃全体の動きを確認できます。</p>
+      <p>左の「骨を追加」でボーン(攻撃オブジェクト)を作成。キャンバス上でドラッグして位置を、先端の丸ハンドルで回転を操作すると、その瞬間の時刻にキーフレームが自動作成/更新されます。下のタイムラインでは各キーフレームがマーカーとして並び、クリックで選択・ドラッグで時刻を変更できます。「プレビュー再生」で攻撃全体の動きを確認できます。「補間」をイーズにすると滑らかに加減速します。「反転複製」はX座標と回転を反転した鏡合わせの骨を複製します。</p>
+      <h3>骨の種類</h3>
+      <p><b>通常(白)</b>: 触れると常に被弾。<br><b>青</b>: 触れた瞬間に魂が「動いていると」被弾。止まっていればすり抜けられる。<br><b>オレンジ</b>: 触れた瞬間に魂が「止まっていると」被弾。動き続けていればすり抜けられる。<br><b>ブラスター</b>: 不透明度が低い間は溜め(無害)、不透明度0.6以上で発射(前方のビームのみ危険)。キーフレームの不透明度で溜め→発射→消滅を作れる。</p>
       <h3>プレイ</h3>
-      <p>上部タブの「プレイ」で実際に攻撃を体験。矢印キー/WASDで魂(ハート)を動かし、骨に当たらないように攻撃時間を耐えきればクリア。被弾すると短時間無敵になります。</p>
+      <p>上部タブの「プレイ」で実際に攻撃を体験。矢印キー/WASD(スマホは画面下の十字ボタン)で魂(ハート)を動かし、骨に当たらないように攻撃時間を耐えきればクリア。被弾すると短時間無敵になり、画面が揺れて赤く点滅します。ノーダメージで勝利すると専用の表示が出ます。</p>
       <h3>保存・共有</h3>
-      <p>「保存」でこの端末(ブラウザ)に保存、「書き出し」でJSONファイルとしてダウンロード。「読み込み」でJSONファイルを読み込めます。「ライブラリ」からテンプレートや保存済みパターンを開けます。</p>
+      <p>「保存」でこの端末(ブラウザ)に保存、「書き出し」でJSONファイルとしてダウンロード。「読み込み」でJSONファイルを読み込めます。「ライブラリ」からテンプレートや保存済みパターンを開けます。効果音はすべてWebAudioでの自作合成で、右上の🔊ボタンでオン/オフを切り替えられます。</p>
     </div>
   </div>
 </div>
@@ -173,6 +176,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/render.js"></script>
+<script src="js/sfx.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/player.js"></script>
 <script src="js/main.js"></script>

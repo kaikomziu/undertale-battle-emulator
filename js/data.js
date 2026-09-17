@@ -16,10 +16,19 @@ const Data = (() => {
     };
   }
 
+  const KIND_DEFAULTS = {
+    normal:  { label: '通常(白)',       color: '#f5f5f5' },
+    blue:    { label: '青(動くと当たる)', color: '#3fa9ff' },
+    orange:  { label: 'オレンジ(止まると当たる)', color: '#ff8a3f' },
+    blaster: { label: 'ブラスター',      color: '#eaf6ff' },
+  };
+
   function newBone(overrides) {
     return Object.assign({
       id: uid('bone'),
       name: '骨',
+      kind: 'normal',
+      ease: 'linear',
       color: '#f5f5f5',
       length: 90,
       thickness: 16,
@@ -27,6 +36,18 @@ const Data = (() => {
         { t: 0, x: 0, y: 0, rot: 0, scale: 1, opacity: 1 },
       ],
     }, overrides || {});
+  }
+
+  function mirrorBone(bone) {
+    const copy = clone(bone);
+    copy.id = uid('bone');
+    copy.name = bone.name + '(反転)';
+    copy.keyframes = bone.keyframes.map(k => ({
+      ...k,
+      x: -k.x,
+      rot: (180 - k.rot),
+    }));
+    return copy;
   }
 
   function newPattern(name) {
@@ -208,18 +229,63 @@ const Data = (() => {
     return p;
   }
 
+  function tplBlueOrange() {
+    const p = newPattern('サンプル: 青とオレンジ');
+    p.settings.duration = 10000;
+    p.bones = [
+      newBone({ name: '青骨(動くと危険)', kind: 'blue', color: KIND_DEFAULTS.blue.color, length: 300, thickness: 18, keyframes: [
+        { t: 0, x: 0, y: -70, rot: 0, scale: 1, opacity: 1 },
+        { t: 5000, x: 0, y: -70, rot: 0, scale: 1, opacity: 1 },
+        { t: 5001, x: 0, y: -70, rot: 0, scale: 1, opacity: 0 },
+      ]}),
+      newBone({ name: 'オレンジ骨(止まると危険)', kind: 'orange', color: KIND_DEFAULTS.orange.color, length: 300, thickness: 18, keyframes: [
+        { t: 5000, x: 0, y: 70, rot: 0, scale: 1, opacity: 0 },
+        { t: 5001, x: 0, y: 70, rot: 0, scale: 1, opacity: 1 },
+        { t: 10000, x: 0, y: 70, rot: 0, scale: 1, opacity: 1 },
+      ]}),
+    ];
+    return p;
+  }
+
+  function tplBlaster() {
+    const p = newPattern('サンプル: ガスターブラスター');
+    p.settings.duration = 9000;
+    const mkBlaster = (name, x, y, rot) => newBone({
+      name, kind: 'blaster', color: KIND_DEFAULTS.blaster.color, length: 420, thickness: 46,
+      keyframes: [
+        { t: 0, x, y, rot, scale: 1, opacity: 0 },
+        { t: 900, x, y, rot, scale: 1, opacity: 0.4 },
+        { t: 1500, x, y, rot, scale: 1, opacity: 1 },
+        { t: 2100, x, y, rot, scale: 1, opacity: 1 },
+        { t: 2300, x, y, rot, scale: 1, opacity: 0 },
+      ],
+    });
+    p.bones = [
+      mkBlaster('ブラスター(左から)', -180, 0, 0),
+      Object.assign(mkBlaster('ブラスター(上から)', 0, -130, 90), {
+        keyframes: mkBlaster('', 0, -130, 90).keyframes.map(k => ({ ...k, t: k.t + 2600 })),
+      }),
+      Object.assign(mkBlaster('ブラスター(右から)', 220, 40, 180), {
+        keyframes: mkBlaster('', 220, 40, 180).keyframes.map(k => ({ ...k, t: k.t + 5200 })),
+      }),
+    ];
+    return p;
+  }
+
   const TEMPLATES = [
     { id: 'tpl_sweep', label: '横なぎ骨', desc: '左右からシンプルに骨が流れてくる入門用パターン。', build: tplSimpleSweep },
     { id: 'tpl_spin', label: '回転する骨', desc: '中央で長い骨が回転し続ける。回転キーフレームの作例。', build: tplSpinner },
     { id: 'tpl_wall', label: '隙間の壁', desc: '骨の壁に空いた隙間を通り抜けていくパピルス風の壁攻撃。', build: tplWallGap },
     { id: 'tpl_cross', label: '十字連打', desc: '上下左右から交互に骨が飛んでくる連続攻撃。', build: tplCrossFire },
     { id: 'tpl_wave', label: '波状の骨', desc: '複数の短い骨がサインカーブ状に上下する。', build: tplWave },
+    { id: 'tpl_blueorange', label: '青とオレンジ', desc: '青骨は動くと被弾、オレンジ骨は止まると被弾。切り替えを体感できる。', build: tplBlueOrange },
+    { id: 'tpl_blaster', label: 'ガスターブラスター', desc: '溜めてから発射するブラスター攻撃。3方向から順に撃ってくる。', build: tplBlaster },
   ];
 
   return {
-    uid, defaultSettings, newBone, newPattern, clone, sortKf,
+    uid, defaultSettings, newBone, mirrorBone, newPattern, clone, sortKf,
     listSaves, savePattern, deleteSave,
     exportPattern, importPatternFile,
-    TEMPLATES,
+    KIND_DEFAULTS, TEMPLATES,
   };
 })();

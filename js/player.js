@@ -12,7 +12,10 @@ const Player = (() => {
   let invincibleUntil = 0;
   let lastTs = 0;
   let rafId = null;
-  let hitFlash = 0;
+  let hitCount = 0;
+  let shakeUntil = 0;
+  let flashUntil = 0;
+  let soulMoving = false;
 
   const keys = { up: false, down: false, left: false, right: false };
   const el = {};
@@ -99,12 +102,16 @@ const Player = (() => {
     soulX = 0; soulY = s.boxH / 2 - 24;
     elapsed = 0;
     invincibleUntil = 0;
-    hitFlash = 0;
+    hitCount = 0;
+    shakeUntil = 0;
+    flashUntil = 0;
+    soulMoving = false;
     Object.keys(keys).forEach(k => keys[k] = false);
     el.btnPlayStart.classList.add('hidden');
     el.btnPlayRetry.classList.remove('hidden');
     el.playOverlay.classList.add('hidden');
     updateHud();
+    Sfx.blip();
     lastTs = performance.now();
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
@@ -128,7 +135,8 @@ const Player = (() => {
     if (keys.down) dy += 1;
     if (keys.left) dx -= 1;
     if (keys.right) dx += 1;
-    if (dx || dy) {
+    soulMoving = !!(dx || dy);
+    if (soulMoving) {
       const len = Math.hypot(dx, dy);
       soulX += (dx / len) * speed * dt;
       soulY += (dy / len) * speed * dt;
@@ -141,10 +149,13 @@ const Player = (() => {
     if (now >= invincibleUntil) {
       for (const b of pattern.bones) {
         const sample = Render.sampleBone(b, elapsed);
-        if (Render.circleVsBone(soulX, soulY, SOUL_RADIUS, b, sample)) {
+        if (Render.hitTest(soulX, soulY, SOUL_RADIUS, b, sample, soulMoving)) {
           hp = Math.max(0, hp - s.damage);
           invincibleUntil = now + INVINCIBLE_MS;
-          hitFlash = 1;
+          hitCount++;
+          shakeUntil = now + 220;
+          flashUntil = now + 260;
+          Sfx.hit();
           updateHud();
           if (hp <= 0) { finish('lose'); return; }
           break;
@@ -162,6 +173,11 @@ const Player = (() => {
   function draw(now) {
     const s = pattern.settings;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    if (now < shakeUntil) {
+      const remain = (shakeUntil - now) / 220;
+      ctx.translate((Math.random() - 0.5) * 10 * remain, (Math.random() - 0.5) * 10 * remain);
+    }
     Render.drawBox(ctx, tr, s.boxW, s.boxH);
     pattern.bones.forEach(b => {
       const sample = Render.sampleBone(b, elapsed);
@@ -169,6 +185,12 @@ const Player = (() => {
     });
     const blink = now < invincibleUntil && Math.floor(now / 90) % 2 === 0;
     Render.drawSoul(ctx, tr, soulX, soulY, { blink });
+    ctx.restore();
+    if (now < flashUntil) {
+      const alpha = (flashUntil - now) / 260 * 0.35;
+      ctx.fillStyle = `rgba(255,0,40,${alpha})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
   }
 
   function finish(result) {
@@ -179,11 +201,15 @@ const Player = (() => {
     if (result === 'win') {
       el.playResultTitle.textContent = 'YOU WON';
       el.playResultTitle.className = 'win';
-      el.playResultDesc.textContent = '攻撃を耐えきった。';
+      el.playResultDesc.textContent = hitCount === 0
+        ? '攻撃を耐えきった。ノーダメージクリア！'
+        : `攻撃を耐えきった。(被弾 ${hitCount}回)`;
+      Sfx.win();
     } else {
       el.playResultTitle.textContent = 'GAME OVER';
       el.playResultTitle.className = 'lose';
       el.playResultDesc.textContent = 'ぼうしがちった…もう一度ちょうせんしよう。';
+      Sfx.lose();
     }
   }
 
