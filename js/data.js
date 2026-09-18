@@ -34,6 +34,7 @@ const Data = (() => {
       thickness: 16,
       jitter: 0,
       jitterGroup: '',
+      telegraph: 300,
       keyframes: [
         { t: 0, x: 0, y: 0, rot: 0, scale: 1, opacity: 1 },
       ],

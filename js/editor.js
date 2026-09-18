@@ -88,6 +88,21 @@ const Editor = (() => {
     return kf;
   }
 
+  // 「この時刻で消す/出現」用: 直前のキーフレームがどれだけ離れていても、
+  // だんだん透明になるフェードにならないよう、現在時刻の見た目を一旦固定してから
+  // 1ms後に不透明度だけ切り替える(ほぼ瞬時のオン/オフに見える)。
+  function snapOpacity(bone, targetOpacity) {
+    upsertKfAtScrub(bone, {}); // 現在時刻の見た目をそのまま固定
+    const cur = Render.sampleBone(bone, scrubTime);
+    const snapT = Math.min(pattern.settings.duration, Math.round(scrubTime) + 1);
+    bone.keyframes = bone.keyframes.filter(k => Math.abs(k.t - snapT) > 1 || k.t === Math.round(scrubTime));
+    const kf = { t: snapT, x: cur.x, y: cur.y, rot: cur.rot, scale: cur.scale, opacity: targetOpacity };
+    bone.keyframes.push(kf);
+    Data.sortKf(bone);
+    selectedKf = kf;
+    return kf;
+  }
+
   // ---------- 描画 ----------
   function renderStage() {
     const s = pattern.settings;
@@ -95,6 +110,10 @@ const Editor = (() => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     Render.drawBox(ctx, tr, s.boxW, s.boxH);
     pattern.bones.forEach(b => {
+      if (b.kind !== 'blaster') {
+        const tg = Render.sampleTelegraph(b, scrubTime);
+        if (tg) Render.drawTelegraph(ctx, tr, b, tg);
+      }
       const sample = Render.sampleBone(b, scrubTime);
       Render.drawBone(ctx, tr, b, sample, { selected: b.id === selectedBoneId });
     });
@@ -129,6 +148,8 @@ const Editor = (() => {
       <label>長さ(初期値)${b.kind === 'blaster' ? '・射程' : ''}<input id="bpLength" type="number" min="10" max="600" step="2" value="${b.length}"></label>
       <label>太さ(初期値)${b.kind === 'blaster' ? '・ビーム幅' : ''}<input id="bpThick" type="number" min="4" max="120" step="2" value="${b.thickness}"></label>
       <p class="propsHint">長さ・太さはキーフレームごとに上書き可能(下のキーフレーム欄)。ここは上書きしていないキーフレームに使われる初期値。</p>
+      <label>予告線(出現の何ms前に表示)${b.kind === 'blaster' ? '・溜め演出があるため非表示' : ''}<input id="bpTelegraph" type="number" min="0" max="3000" step="50" value="${b.telegraph || 0}"${b.kind === 'blaster' ? ' disabled' : ''}></label>
+      <p class="propsHint">出現する直前に、点線の輪郭だけをその位置に薄く表示する(当たり判定は無い)。0にすると予告なしでいきなり出現する。</p>
       <label>ランダム幅(±ms)<input id="bpJitter" type="number" min="0" max="5000" step="50" value="${b.jitter || 0}"></label>
       <label>ランダムグループ(任意)<input id="bpJitterGroup" type="text" maxlength="20" value="${escapeAttr(b.jitterGroup || '')}" placeholder="空欄なら単独で揺れる"></label>
       <p class="propsHint">プレイ開始のたびに、この骨のタイミングを±ランダム幅の範囲でずらす。同じ「ランダムグループ」名を持つ骨同士は必ず同じだけずれる(壁の隙間など複数の骨を連動させたい時に使う)。パターンを覚えられてしまう問題を防ぐための機能。</p>
@@ -147,6 +168,7 @@ const Editor = (() => {
     qs('bpEase').addEventListener('change', e => { b.ease = e.target.value; renderStage(); });
     qs('bpLength').addEventListener('input', e => { b.length = Number(e.target.value) || 10; renderStage(); renderKfList(); });
     qs('bpThick').addEventListener('input', e => { b.thickness = Number(e.target.value) || 4; renderStage(); renderKfList(); });
+    qs('bpTelegraph').addEventListener('input', e => { b.telegraph = Math.max(0, Number(e.target.value) || 0); renderStage(); });
     qs('bpJitter').addEventListener('input', e => { b.jitter = Math.max(0, Number(e.target.value) || 0); });
     qs('bpJitterGroup').addEventListener('input', e => { b.jitterGroup = e.target.value; });
     qs('bpDup').addEventListener('click', () => {
@@ -500,14 +522,14 @@ const Editor = (() => {
     el.btnShowNow.addEventListener('click', () => {
       const b = findBone(selectedBoneId);
       if (!b) return;
-      upsertKfAtScrub(b, { opacity: 1 });
+      snapOpacity(b, 1);
       renderKfList(); renderTimeline(); renderStage();
     });
 
     el.btnHideNow.addEventListener('click', () => {
       const b = findBone(selectedBoneId);
       if (!b) return;
-      upsertKfAtScrub(b, { opacity: 0 });
+      snapOpacity(b, 0);
       renderKfList(); renderTimeline(); renderStage();
     });
 

@@ -200,7 +200,12 @@ const Player = (() => {
     }
     Render.drawBox(ctx, tr, s.boxW, s.boxH);
     pattern.bones.forEach(b => {
-      const sample = Render.sampleBone(b, boneTime(b));
+      const bt = boneTime(b);
+      if (b.kind !== 'blaster') {
+        const tg = Render.sampleTelegraph(b, bt);
+        if (tg) Render.drawTelegraph(ctx, tr, b, tg);
+      }
+      const sample = Render.sampleBone(b, bt);
       Render.drawBone(ctx, tr, b, sample, {});
     });
     const blink = now < invincibleUntil && Math.floor(now / 90) % 2 === 0;

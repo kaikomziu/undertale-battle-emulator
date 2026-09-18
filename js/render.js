@@ -46,6 +46,18 @@ const Render = (() => {
     return { x: 0, y: 0, rot: 0, scale: 1, opacity: 0, length: bone.length, thickness: bone.thickness, visible: false };
   }
 
+  // 骨がこれから出現する(有効になる)場合、その未来の見た目を予告線として返す。
+  // すでに出現済み、またはtelegraph時間内に出現しないならnull。
+  function sampleTelegraph(bone, t) {
+    const tel = bone.telegraph || 0;
+    if (!tel) return null;
+    const now = sampleBone(bone, t);
+    if (now.visible && now.opacity >= 0.5) return null;
+    const future = sampleBone(bone, t + tel);
+    if (!(future.visible && future.opacity >= 0.5)) return null;
+    return future;
+  }
+
   function roundRectPath(ctx, x, y, w, h, r) {
     r = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
@@ -165,6 +177,25 @@ const Render = (() => {
     ctx.restore();
   }
 
+  // 出現予告線: 点線の輪郭だけを薄く描画する(まだ無害、当たり判定は無い)
+  function drawTelegraph(ctx, tr, bone, sample) {
+    const [cx, cy] = tr.toCanvas(sample.x, sample.y);
+    const len = sample.length * sample.scale * tr.scale;
+    const thick = sample.thickness * sample.scale * tr.scale;
+    const hl = len / 2, ht = thick / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(sample.rot * Math.PI / 180);
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = bone.color || '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    roundRectPath(ctx, -hl, -ht, len, thick, ht);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
   function drawBone(ctx, tr, bone, sample, opts) {
     if (!sample.visible || sample.opacity <= 0.01) return;
     opts = opts || {};
@@ -281,7 +312,7 @@ const Render = (() => {
   }
 
   return {
-    sampleBone, makeTransform, drawBox, drawBone, drawSoul,
+    sampleBone, sampleTelegraph, makeTransform, drawBox, drawBone, drawTelegraph, drawSoul,
     circleVsCenteredRect, circleVsBeam, hitTest, roundRectPath,
   };
 })();
