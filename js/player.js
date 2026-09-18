@@ -46,7 +46,38 @@ const Player = (() => {
     el.btnPlayBackEdit.addEventListener('click', () => Main.goToEditor());
     el.btnOverlayEdit.addEventListener('click', () => Main.goToEditor());
 
+    fitPlayCanvas();
+    window.addEventListener('resize', fitPlayCanvas);
+    const wrap = document.querySelector('.playWrap');
+    if (window.ResizeObserver && wrap) new ResizeObserver(fitPlayCanvas).observe(wrap);
+
     drawIdle();
+  }
+
+  // キャンバスの表示サイズを、周りのHUD/ボタンを除いた実際の余白に合わせて
+  // 縦横比640:420を保ったまま調整する(画面が低いとプレビューが入り切らない対策)
+  function fitPlayCanvas() {
+    const wrap = document.querySelector('.playWrap');
+    if (!wrap || !canvas) return;
+    if (wrap.clientHeight === 0) return; // 非表示中はスキップ
+    let siblingsH = 0;
+    Array.from(wrap.children).forEach(child => {
+      if (child === canvas) return;
+      const cs = getComputedStyle(child);
+      if (cs.display === 'none') return;
+      siblingsH += child.offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+    });
+    const wrapStyle = getComputedStyle(wrap);
+    const padV = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
+    const padH = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
+    const availH = wrap.clientHeight - padV - siblingsH - 16;
+    const availW = wrap.clientWidth - padH - 4;
+    const ratio = 640 / 420;
+    let w = Math.max(160, availW);
+    let h = w / ratio;
+    if (h > availH) { h = Math.max(105, availH); w = h * ratio; }
+    canvas.style.width = Math.floor(w) + 'px';
+    canvas.style.height = Math.floor(h) + 'px';
   }
 
   function bindTouchPad() {
@@ -249,5 +280,5 @@ const Player = (() => {
     status = 'ready';
   }
 
-  return { init, setPattern, onLeave };
+  return { init, setPattern, onLeave, fitPlayCanvas };
 })();

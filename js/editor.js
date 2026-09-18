@@ -39,6 +39,32 @@ const Editor = (() => {
 
     setPattern(initialPattern);
     bindEvents();
+
+    fitStageCanvas();
+    window.addEventListener('resize', fitStageCanvas);
+    if (window.ResizeObserver) {
+      new ResizeObserver(fitStageCanvas).observe(qs('stagePanel'));
+    }
+  }
+
+  // キャンバスの表示サイズを、パネルの実際の余白(ツールバー・注意書きを除いた分)に
+  // 収まるよう縦横比640:420を保ったまま調整する(画面が低いとプレビューが入り切らない対策)
+  function fitStageCanvas() {
+    const panel = qs('stagePanel');
+    const toolbar = document.querySelector('.stageToolbar');
+    const hint = document.querySelector('.stageHint');
+    if (!panel || !canvas) return;
+    const cs = getComputedStyle(panel);
+    const padV = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const padH = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const availH = panel.clientHeight - padV - (toolbar ? toolbar.offsetHeight : 0) - (hint ? hint.offsetHeight : 0) - 20;
+    const availW = panel.clientWidth - padH - 4;
+    const ratio = 640 / 420;
+    let w = Math.max(160, availW);
+    let h = w / ratio;
+    if (h > availH) { h = Math.max(105, availH); w = h * ratio; }
+    canvas.style.width = Math.floor(w) + 'px';
+    canvas.style.height = Math.floor(h) + 'px';
   }
 
   function setPattern(p) {
@@ -574,5 +600,5 @@ const Editor = (() => {
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function escapeAttr(s) { return escapeHtml(s); }
 
-  return { init, setPattern, getPattern, renderAll, stopPreview };
+  return { init, setPattern, getPattern, renderAll, stopPreview, fitStageCanvas };
 })();

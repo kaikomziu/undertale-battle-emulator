@@ -23,9 +23,11 @@ const Main = (() => {
     if (mode === 'play') {
       Editor.stopPreview();
       Player.setPattern(Data.clone(Editor.getPattern()));
+      Player.fitPlayCanvas();
     } else {
       Player.onLeave();
       Editor.renderAll();
+      Editor.fitStageCanvas();
     }
   }
 
