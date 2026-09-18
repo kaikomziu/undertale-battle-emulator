@@ -315,7 +315,7 @@ const Editor = (() => {
     });
 
     el.playhead.style.left = ((scrubTime / 1000) * PX_PER_SEC) + 'px';
-    el.playhead.style.height = (32 + pattern.bones.length * 30) + 'px';
+    el.playhead.style.height = (el.timelineRuler.offsetHeight + el.timelineTracks.offsetHeight) + 'px';
   }
 
   function startMarkerDrag(bone, kf, evt) {
@@ -374,22 +374,36 @@ const Editor = (() => {
   }
 
   // ---------- キャンバス操作 ----------
+  // 指定したスクリーン上のピクセル数を、現在のキャンバス表示倍率を踏まえて
+  // 箱スペースの単位に変換する(キャンバスが小さく表示されているスマホでも
+  // タップの当たり判定が指の大きさ分きちんと確保されるようにするため)
+  function screenPxToBox(px) {
+    const rect = canvas.getBoundingClientRect();
+    const dispScale = rect.width > 0 ? canvas.width / rect.width : 1;
+    return (px * dispScale) / tr.scale;
+  }
+
   function hitTestBone(bx, by, bone, sample) {
+    const pad = screenPxToBox(16);
     const rad = -sample.rot * Math.PI / 180;
     const dx = bx - sample.x, dy = by - sample.y;
     const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
     const ly = dx * Math.sin(rad) + dy * Math.cos(rad);
-    const hl = (sample.length * sample.scale) / 2 + 6;
-    const ht = (sample.thickness * sample.scale) / 2 + 6;
+    const hl = (sample.length * sample.scale) / 2 + pad;
+    const ht = (sample.thickness * sample.scale) / 2 + pad;
     if (Math.abs(lx) <= hl && Math.abs(ly) <= ht) return true;
     // 発射口(原点)付近を掴みやすくする
-    return Math.hypot(dx, dy) <= (sample.thickness * sample.scale) * 0.9 + 6;
+    return Math.hypot(dx, dy) <= (sample.thickness * sample.scale) * 0.9 + pad;
   }
 
   function handlePos(bone, sample) {
     const hl = (sample.length * sample.scale) / 2 + 24 / tr.scale;
     const rad = sample.rot * Math.PI / 180;
     return { x: sample.x + Math.cos(rad) * hl, y: sample.y + Math.sin(rad) * hl };
+  }
+
+  function safeSetPointerCapture(el, pointerId) {
+    try { el.setPointerCapture(pointerId); } catch (e) { /* 実ポインタでない等は無視 */ }
   }
 
   function bindCanvasEvents() {
@@ -402,9 +416,9 @@ const Editor = (() => {
         if (s.visible !== false) {
           const hp = handlePos(selBone, s);
           const dist = Math.hypot(bx - hp.x, by - hp.y);
-          if (dist < 14 / tr.scale) {
+          if (dist < screenPxToBox(22)) {
             drag = { mode: 'rotate', boneId: selBone.id };
-            canvas.setPointerCapture(e.pointerId);
+            safeSetPointerCapture(canvas, e.pointerId);
             return;
           }
         }
@@ -416,7 +430,7 @@ const Editor = (() => {
           selectedBoneId = b.id;
           selectedKf = b.keyframes.find(k => Math.abs(k.t - scrubTime) <= KF_EPS) || null;
           drag = { mode: 'move', boneId: b.id, offX: bx - s.x, offY: by - s.y };
-          canvas.setPointerCapture(e.pointerId);
+          safeSetPointerCapture(canvas, e.pointerId);
           renderBoneList(); renderKfList(); renderTimeline(); renderStage();
           return;
         }

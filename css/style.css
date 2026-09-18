@@ -285,4 +285,14 @@ input { font-family: inherit; }
   .tpLeft { grid-column: 1; grid-row: 2; }
   .tpRight { grid-column: 3; grid-row: 2; }
   .tpDown { grid-column: 2; grid-row: 2; }
+
+  /* 指でも操作しやすいようタップ領域を拡大 */
+  .kfMarker { width: 20px; height: 20px; top: 5px; touch-action: none; }
+  .track { height: 34px; }
+  .trackLabel { font-size: 10px; padding: 5px 8px; }
+  .tbtn { padding: 10px 14px; font-size: 13px; }
+  .boneBtnRow button, .kfEditorBtns button, .kfQuickBtns button { min-height: 42px; }
+  .boneRow { padding: 10px 10px; }
+  .addBoneRow button { padding: 10px 14px; }
+  .libRow button { min-height: 40px; }
 }
