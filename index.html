@@ -34,7 +34,7 @@
     <button id="btnExport" class="tbtn" title="JSONで書き出す">書き出し</button>
     <button id="btnImport" class="tbtn" title="JSONを読み込む">読み込み</button>
     <input id="importFile" type="file" accept="application/json" hidden>
-    <button id="btnSound" class="tbtn" title="効果音のオン/オフ">🔊</button>
+    <button id="btnSound" class="tbtn" title="効果音・BGMのオン/オフ">🔊</button>
     <button id="btnHelp" class="tbtn" title="使い方">?</button>
   </div>
 </div>
@@ -61,6 +61,18 @@
         <label>被ダメージ<input id="setDamage" type="number" min="1" max="99" step="1"></label>
         <label>ボックス幅<input id="setBoxW" type="number" min="120" max="600" step="10"></label>
         <label>ボックス高さ<input id="setBoxH" type="number" min="80" max="400" step="10"></label>
+        <label>重力の向き<select id="setGravityDir">
+          <option value="none">なし</option>
+          <option value="down">下に引っぱる</option>
+          <option value="up">上に引っぱる</option>
+          <option value="left">左に引っぱる</option>
+          <option value="right">右に引っぱる</option>
+        </select></label>
+        <label>重力の強さ<input id="setGravityStrength" type="number" min="0" max="400" step="10"></label>
+      </div>
+      <div class="bgmRow">
+        <label class="bgmLabel">BGM<select id="setBgm"></select></label>
+        <button id="btnBgmPreview" class="tbtn">▶ 試聴</button>
       </div>
     </aside>
 
@@ -193,10 +205,14 @@
       <p>骨を選択中はいつでも右側の「種類」で通常/青/オレンジ/ブラスターに変更できます。「複製」は同じ骨をもう1つ、「反転複製」はX座標と回転を反転した鏡合わせの骨を複製します。</p>
       <h3>ランダム幅(パターンを覚えられないようにする)</h3>
       <p>骨のプロパティにある「ランダム幅(±ms)」を設定すると、プレイを始めるたびにその骨のタイミングがランダムに前後するようになり、一度覚えたら毎回同じ動きで避けられる、という状態を防げる。複数の骨を同じタイミングで一緒にずらしたい場合(壁の隙間など)は、それらの骨に同じ「ランダムグループ」名を付けると連動してずれる。空欄のままなら骨ごとに独立してランダムになる。</p>
+      <h3>重力</h3>
+      <p>「設定」の「重力の向き」で下/上/左/右のいずれかを選ぶと、プレイ中ずっとその方向へ一定の力で魂が引っぱられ続けます(「重力の強さ」で強さを調整)。入力キーでの移動と重力は同時に働くので、重力に逆らうように動く必要があります。青/オレンジ骨の「動いているか」の判定は自分でキーを押したかどうかだけを見ていて、重力による移動は関係ありません。ボックス内には向きを示す薄い矢印が表示されます。</p>
+      <h3>BGM</h3>
+      <p>「設定」の「BGM」でこの攻撃を再生する曲を選べます(なし/緊迫/バトル/おだやか)。すべてWebAudioでの自作合成ループで外部音源は不使用。「▶ 試聴」でエディタ内でも確認でき、実際の攻撃は「プレイ」を始めると流れ始め、決着がつくと止まります。右上の🔊ボタンで効果音とまとめてオン/オフできます。</p>
       <h3>プレイ</h3>
       <p>上部タブの「プレイ」で実際に攻撃を体験。矢印キー/WASD(スマホは画面下の十字ボタン)で魂(ハート)を動かし、骨に当たらないように攻撃時間を耐えきればクリア。被弾すると短時間無敵になり、画面が揺れて赤く点滅します。ノーダメージで勝利すると専用の表示が出ます。</p>
       <h3>保存・複製・共有</h3>
-      <p>「保存」でこの端末(ブラウザ)に保存、「書き出し」でJSONファイルとしてダウンロード。「読み込み」でJSONファイルを読み込めます。「パターン複製」は今編集中の攻撃をまるごとコピーして新しい編集を始めます(元のパターンも自動保存されて残ります)。「新規」は空のパターンに切り替えるだけで複製ではないので注意。「ライブラリ」からテンプレートや保存済みパターンを開けます。効果音はすべてWebAudioでの自作合成で、右上の🔊ボタンでオン/オフを切り替えられます。</p>
+      <p>「保存」でこの端末(ブラウザ)に保存、「書き出し」でJSONファイルとしてダウンロード。「読み込み」でJSONファイルを読み込めます。「パターン複製」は今編集中の攻撃をまるごとコピーして新しい編集を始めます(元のパターンも自動保存されて残ります)。「新規」は空のパターンに切り替えるだけで複製ではないので注意。「ライブラリ」からテンプレートや保存済みパターンを開けます。効果音・BGMはすべてWebAudioでの自作合成で、右上の🔊ボタンでオン/オフを切り替えられます。</p>
       <h3>みんなの作品</h3>
       <p>「🌐 公開」を押すと、今編集中の攻撃がインターネット上の共有ギャラリーに公開され、誰でも「ライブラリ」→「みんなの作品」から見つけて遊べるようになります。公開は取り消せないので、内容を確認してから公開してください。ニックネームは省略できます。</p>
     </div>
@@ -224,6 +240,7 @@
 <script src="js/data.js"></script>
 <script src="js/render.js"></script>
 <script src="js/sfx.js"></script>
+<script src="js/bgm.js"></script>
 <script src="js/community.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/player.js"></script>

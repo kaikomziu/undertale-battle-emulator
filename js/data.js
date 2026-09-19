@@ -13,6 +13,9 @@ const Data = (() => {
       hp: 92,
       soulSpeed: 180,   // px/sec (box space)
       damage: 8,
+      gravityDir: 'none', // none/down/up/left/right
+      gravityStrength: 80, // px/sec (gravityDirがnone以外の時のみ有効)
+      bgm: 'none',
     };
   }
 

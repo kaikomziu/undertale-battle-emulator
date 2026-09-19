@@ -123,6 +123,7 @@ const Player = (() => {
     tr = Render.makeTransform(canvas, s.boxW, s.boxH);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     Render.drawBox(ctx, tr, s.boxW, s.boxH);
+    Render.drawGravityHint(ctx, tr, s.boxW, s.boxH, s.gravityDir);
     const sx = 0, sy = s.boxH / 2 - 24;
     Render.drawSoul(ctx, tr, sx, sy, {});
   }
@@ -145,6 +146,7 @@ const Player = (() => {
     el.playOverlay.classList.add('hidden');
     updateHud();
     Sfx.blip();
+    Bgm.play(s.bgm);
     lastTs = performance.now();
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
@@ -192,6 +194,14 @@ const Player = (() => {
       soulX += (dx / len) * speed * dt;
       soulY += (dy / len) * speed * dt;
     }
+    // 重力: 入力とは別に一定の力で常に特定方向へ引っぱる(青/オレンジの「動いているか」判定には影響しない)
+    const gstr = s.gravityStrength || 0;
+    if (gstr > 0) {
+      if (s.gravityDir === 'down') soulY += gstr * dt;
+      else if (s.gravityDir === 'up') soulY -= gstr * dt;
+      else if (s.gravityDir === 'left') soulX -= gstr * dt;
+      else if (s.gravityDir === 'right') soulX += gstr * dt;
+    }
     const hw = s.boxW / 2 - SOUL_RADIUS, hh = s.boxH / 2 - SOUL_RADIUS;
     soulX = Math.max(-hw, Math.min(hw, soulX));
     soulY = Math.max(-hh, Math.min(hh, soulY));
@@ -230,6 +240,7 @@ const Player = (() => {
       ctx.translate((Math.random() - 0.5) * 10 * remain, (Math.random() - 0.5) * 10 * remain);
     }
     Render.drawBox(ctx, tr, s.boxW, s.boxH);
+    Render.drawGravityHint(ctx, tr, s.boxW, s.boxH, s.gravityDir);
     pattern.bones.forEach(b => {
       const bt = boneTime(b);
       if (b.kind !== 'blaster') {
@@ -252,6 +263,7 @@ const Player = (() => {
   function finish(result) {
     status = result;
     stop();
+    Bgm.stop();
     updateHud();
     el.playOverlay.classList.remove('hidden');
     if (result === 'win') {
@@ -277,6 +289,7 @@ const Player = (() => {
 
   function onLeave() {
     stop();
+    Bgm.stop();
     status = 'ready';
   }
 

@@ -22,6 +22,7 @@ const Main = (() => {
     el.playView.classList.toggle('active', mode === 'play');
     if (mode === 'play') {
       Editor.stopPreview();
+      Editor.stopBgmPreview();
       Player.setPattern(Data.clone(Editor.getPattern()));
       Player.fitPlayCanvas();
     } else {
@@ -235,9 +236,11 @@ const Main = (() => {
 
     el.btnSound.textContent = Sfx.isEnabled() ? '🔊' : '🔇';
     el.btnSound.addEventListener('click', () => {
-      Sfx.setEnabled(!Sfx.isEnabled());
-      el.btnSound.textContent = Sfx.isEnabled() ? '🔊' : '🔇';
-      if (Sfx.isEnabled()) Sfx.blip();
+      const next = !Sfx.isEnabled();
+      Sfx.setEnabled(next);
+      Bgm.setEnabled(next);
+      el.btnSound.textContent = next ? '🔊' : '🔇';
+      if (next) Sfx.blip();
     });
   }
 

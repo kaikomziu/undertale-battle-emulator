@@ -28,6 +28,7 @@ const Editor = (() => {
 
     ['patternName', 'boneList', 'btnAddBone', 'newBoneKind',
      'setDuration', 'setHp', 'setSoulSpeed', 'setDamage', 'setBoxW', 'setBoxH',
+     'setGravityDir', 'setGravityStrength', 'setBgm', 'btnBgmPreview',
      'btnPreviewPlay', 'btnPreviewStop', 'scrubReadout', 'durReadout',
      'boneProps', 'kfList', 'kfEditor', 'kfTime', 'kfX', 'kfY', 'kfRot', 'kfScale', 'kfOpacity', 'kfLength', 'kfThick',
      'btnDupKf', 'btnDelKf', 'btnAddKfNow', 'btnShowNow', 'btnHideNow',
@@ -36,6 +37,8 @@ const Editor = (() => {
 
     el.newBoneKind.innerHTML = Object.keys(Data.KIND_DEFAULTS).map(k =>
       `<option value="${k}">${Data.KIND_DEFAULTS[k].label}</option>`).join('');
+    el.setBgm.innerHTML = Object.keys(Bgm.TRACK_LABELS).map(k =>
+      `<option value="${k}">${Bgm.TRACK_LABELS[k]}</option>`).join('');
 
     setPattern(initialPattern);
     bindEvents();
@@ -88,7 +91,12 @@ const Editor = (() => {
     el.setDamage.value = s.damage;
     el.setBoxW.value = s.boxW;
     el.setBoxH.value = s.boxH;
+    el.setGravityDir.value = s.gravityDir || 'none';
+    el.setGravityStrength.value = (typeof s.gravityStrength === 'number') ? s.gravityStrength : 80;
+    el.setBgm.value = s.bgm || 'none';
     el.durReadout.textContent = (s.duration / 1000).toFixed(2);
+    Bgm.stop();
+    el.btnBgmPreview.textContent = '▶ 試聴';
   }
 
   function findBone(id) { return pattern.bones.find(b => b.id === id); }
@@ -135,6 +143,7 @@ const Editor = (() => {
     tr = Render.makeTransform(canvas, s.boxW, s.boxH);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     Render.drawBox(ctx, tr, s.boxW, s.boxH);
+    Render.drawGravityHint(ctx, tr, s.boxW, s.boxH, s.gravityDir);
     pattern.bones.forEach(b => {
       if (b.kind !== 'blaster') {
         const tg = Render.sampleTelegraph(b, scrubTime);
@@ -545,6 +554,23 @@ const Editor = (() => {
     el.setDamage.addEventListener('change', () => { pattern.settings.damage = Math.max(1, Number(el.setDamage.value) || 8); });
     el.setBoxW.addEventListener('change', () => { pattern.settings.boxW = Math.max(80, Number(el.setBoxW.value) || 320); renderStage(); });
     el.setBoxH.addEventListener('change', () => { pattern.settings.boxH = Math.max(60, Number(el.setBoxH.value) || 220); renderStage(); });
+    el.setGravityDir.addEventListener('change', () => { pattern.settings.gravityDir = el.setGravityDir.value; renderStage(); });
+    el.setGravityStrength.addEventListener('change', () => { pattern.settings.gravityStrength = Math.max(0, Number(el.setGravityStrength.value) || 0); });
+    el.setBgm.addEventListener('change', () => {
+      pattern.settings.bgm = el.setBgm.value;
+      if (el.btnBgmPreview.textContent.includes('停止')) {
+        Bgm.play(pattern.settings.bgm);
+      }
+    });
+    el.btnBgmPreview.addEventListener('click', () => {
+      if (el.btnBgmPreview.textContent.includes('試聴')) {
+        Bgm.play(el.setBgm.value);
+        el.btnBgmPreview.textContent = '■ 停止';
+      } else {
+        Bgm.stop();
+        el.btnBgmPreview.textContent = '▶ 試聴';
+      }
+    });
 
     el.btnPreviewPlay.addEventListener('click', startPreview);
     el.btnPreviewStop.addEventListener('click', stopPreview);
@@ -614,5 +640,10 @@ const Editor = (() => {
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function escapeAttr(s) { return escapeHtml(s); }
 
-  return { init, setPattern, getPattern, renderAll, stopPreview, fitStageCanvas };
+  function stopBgmPreview() {
+    Bgm.stop();
+    if (el.btnBgmPreview) el.btnBgmPreview.textContent = '▶ 試聴';
+  }
+
+  return { init, setPattern, getPattern, renderAll, stopPreview, fitStageCanvas, stopBgmPreview };
 })();

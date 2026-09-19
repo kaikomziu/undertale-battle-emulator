@@ -94,6 +94,41 @@ const Render = (() => {
     ctx.restore();
   }
 
+  const GRAVITY_VECTORS = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
+
+  // ボックス内に重力の向きを示す矢印を薄く表示する
+  function drawGravityHint(ctx, tr, boxW, boxH, dir) {
+    const vec = GRAVITY_VECTORS[dir];
+    if (!vec) return;
+    const [vx, vy] = vec;
+    const perpX = -vy, perpY = vx;
+    const lanes = [-0.28, 0, 0.28];
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = '#ffffff';
+    ctx.fillStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    lanes.forEach(l => {
+      const baseX = perpX * l * boxW, baseY = perpY * l * boxH;
+      const len = Math.min(boxW, boxH) * 0.3;
+      const [x0, y0] = tr.toCanvas(baseX - vx * len / 2, baseY - vy * len / 2);
+      const [x1, y1] = tr.toCanvas(baseX + vx * len / 2, baseY + vy * len / 2);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+      const ah = 7;
+      const angle = Math.atan2(y1 - y0, x1 - x0);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x1 - ah * Math.cos(angle - 0.5), y1 - ah * Math.sin(angle - 0.5));
+      ctx.lineTo(x1 - ah * Math.cos(angle + 0.5), y1 - ah * Math.sin(angle + 0.5));
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
   function drawBonePill(ctx, bone, hl, ht) {
     ctx.fillStyle = bone.color || '#f5f5f5';
     ctx.strokeStyle = 'rgba(0,0,0,0.4)';
@@ -312,7 +347,7 @@ const Render = (() => {
   }
 
   return {
-    sampleBone, sampleTelegraph, makeTransform, drawBox, drawBone, drawTelegraph, drawSoul,
+    sampleBone, sampleTelegraph, makeTransform, drawBox, drawGravityHint, drawBone, drawTelegraph, drawSoul,
     circleVsCenteredRect, circleVsBeam, hitTest, roundRectPath,
   };
 })();
